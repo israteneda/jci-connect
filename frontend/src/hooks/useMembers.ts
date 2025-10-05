@@ -17,9 +17,9 @@ interface CreateMemberData {
   last_name: string
   phone?: string
   date_of_birth?: string
-  city?: string
-  country?: string
+  address?: string
   membership_type?: 'local' | 'national' | 'international'
+  payment_type?: 'annual' | 'monthly'
   start_date?: string
   expiry_date?: string
   annual_fee?: number
@@ -150,8 +150,7 @@ export function useMembers() {
           role: memberData.role,
           phone: memberData.phone,
           date_of_birth: memberData.date_of_birth,
-          city: memberData.city,
-          country: memberData.country,
+          address: memberData.address,
           status: memberData.role === 'candidate' ? 'pending' : 'active',
         })
         .eq('id', userId)
@@ -162,10 +161,9 @@ export function useMembers() {
 
       // 3. Create membership (if membership data is provided)
       if (memberData.membership_type && memberData.start_date && memberData.expiry_date) {
-        // Generate member number
-        memberNumber = generateMemberNumber(
-          memberData.city?.substring(0, 3).toUpperCase() || 'JCI'
-        )
+        // Generate member number - use first 3 chars of address or fallback to JCI
+        const addressPrefix = memberData.address?.split(',')[0]?.trim().substring(0, 3).toUpperCase() || 'JCI'
+        memberNumber = generateMemberNumber(addressPrefix)
 
         // Create membership
         const { error: membershipError } = await supabase
@@ -173,6 +171,7 @@ export function useMembers() {
           .insert({
             user_id: userId,
             membership_type: memberData.membership_type,
+            payment_type: memberData.payment_type || 'annual',
             start_date: memberData.start_date,
             expiry_date: memberData.expiry_date,
             member_number: memberNumber,

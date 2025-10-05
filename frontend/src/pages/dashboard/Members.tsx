@@ -61,9 +61,9 @@ export function Members() {
         )}
       </div>
 
-      {/* Search and Filter */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="relative">
+      {/* Search and Filters - Responsive layout */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             type="text"
@@ -73,7 +73,7 @@ export function Members() {
             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent outline-none"
           />
         </div>
-        <div className="relative">
+        <div className="relative sm:w-48">
           <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <select
             value={roleFilter}
@@ -89,30 +89,31 @@ export function Members() {
         </div>
       </div>
 
-      {/* Members Table */}
+      {/* Members Table - Horizontal scroll on mobile */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Name
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="hidden sm:table-cell px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Email
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Role
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="hidden lg:table-cell px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Member #
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="hidden xl:table-cell px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Membership Type
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 md:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -127,15 +128,19 @@ export function Members() {
             ) : (
               filteredMembers?.map((member) => (
                 <tr key={member.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
                       {member.first_name} {member.last_name}
                     </div>
+                    {/* Show email on mobile under name */}
+                    <div className="text-xs text-gray-500 sm:hidden mt-1">
+                      {member.email || 'N/A'}
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="hidden sm:table-cell px-4 md:px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-500">{member.email || 'N/A'}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       member.role === 'admin'
                         ? 'bg-purple-100 text-purple-800'
@@ -148,13 +153,13 @@ export function Members() {
                       {member.role}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="hidden lg:table-cell px-4 md:px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{member.memberships?.member_number || 'N/A'}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="hidden xl:table-cell px-4 md:px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 capitalize">{member.memberships?.membership_type || 'N/A'}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       member.memberships?.status === 'active'
                         ? 'bg-green-100 text-green-800'
@@ -163,11 +168,12 @@ export function Members() {
                       {member.memberships?.status || 'N/A'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
                       <Link
                         to={`/dashboard/members/${member.id}`}
                         className="text-aqua hover:text-aqua-600"
+                        title="View details"
                       >
                         <Eye className="h-5 w-5" />
                       </Link>
@@ -175,6 +181,7 @@ export function Members() {
                         <button
                           onClick={() => handleDelete(member.id, `${member.first_name} ${member.last_name}`)}
                           className="text-red-600 hover:text-red-800"
+                          title="Delete member"
                         >
                           <Trash2 className="h-5 w-5" />
                         </button>
@@ -185,7 +192,8 @@ export function Members() {
               ))
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
 
       <MemberFormDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />

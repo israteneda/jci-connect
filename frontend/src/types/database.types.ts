@@ -21,8 +21,7 @@ export interface Database {
           avatar_url: string | null
           bio: string | null
           linkedin_url: string | null
-          city: string | null
-          country: string | null
+          address: string | null
           language_preference: 'en' | 'es'
           last_login: string | null
           created_at: string
@@ -39,8 +38,7 @@ export interface Database {
           avatar_url?: string | null
           bio?: string | null
           linkedin_url?: string | null
-          city?: string | null
-          country?: string | null
+          address?: string | null
           language_preference?: 'en' | 'es'
           last_login?: string | null
           created_at?: string
@@ -57,8 +55,7 @@ export interface Database {
           avatar_url?: string | null
           bio?: string | null
           linkedin_url?: string | null
-          city?: string | null
-          country?: string | null
+          address?: string | null
           language_preference?: 'en' | 'es'
           last_login?: string | null
           created_at?: string
@@ -75,6 +72,7 @@ export interface Database {
           expiry_date: string
           member_number: string
           payment_status: 'paid' | 'pending' | 'overdue'
+          payment_type: 'annual' | 'monthly'
           annual_fee: number | null
           created_at: string
           updated_at: string
@@ -82,12 +80,13 @@ export interface Database {
         Insert: {
           id?: string
           user_id: string
-          membership_type: 'local' | 'senator' | 'national' | 'international'
+          membership_type?: 'local' | 'senator' | 'national' | 'international'
           status?: 'active' | 'expired' | 'suspended'
           start_date: string
           expiry_date: string
           member_number: string
           payment_status?: 'paid' | 'pending' | 'overdue'
+          payment_type?: 'annual' | 'monthly'
           annual_fee?: number | null
           created_at?: string
           updated_at?: string
@@ -101,6 +100,7 @@ export interface Database {
           expiry_date?: string
           member_number?: string
           payment_status?: 'paid' | 'pending' | 'overdue'
+          payment_type?: 'annual' | 'monthly'
           annual_fee?: number | null
           created_at?: string
           updated_at?: string
@@ -137,6 +137,53 @@ export interface Database {
           start_date?: string | null
           end_date?: string | null
           is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      chapter_settings: {
+        Row: {
+          id: string
+          chapter_name: string
+          chapter_city: string | null
+          chapter_country: string | null
+          description: string | null
+          email: string | null
+          phone: string | null
+          website: string | null
+          logo_url: string | null
+          primary_color: string
+          secondary_color: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          chapter_name?: string
+          chapter_city?: string | null
+          chapter_country?: string | null
+          description?: string | null
+          email?: string | null
+          phone?: string | null
+          website?: string | null
+          logo_url?: string | null
+          primary_color?: string
+          secondary_color?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          chapter_name?: string
+          chapter_city?: string | null
+          chapter_country?: string | null
+          description?: string | null
+          email?: string | null
+          phone?: string | null
+          website?: string | null
+          logo_url?: string | null
+          primary_color?: string
+          secondary_color?: string
           created_at?: string
           updated_at?: string
         }

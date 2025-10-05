@@ -96,10 +96,10 @@ export function MemberDetail() {
                   <span>{member.phone}</span>
                 </div>
               )}
-              {(member.city || member.country) && (
+              {member.address && (
                 <div className="flex items-center gap-3">
                   <MapPin className="h-5 w-5 text-gray-400" />
-                  <span>{member.city}, {member.country}</span>
+                  <span>{member.address}</span>
                 </div>
               )}
             </div>
