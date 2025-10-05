@@ -1,11 +1,10 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Users, Building2, LayoutDashboard } from 'lucide-react'
+import { Users, LayoutDashboard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Members', href: '/dashboard/members', icon: Users },
-  { name: 'Chapters', href: '/dashboard/chapters', icon: Building2 },
 ]
 
 export function Sidebar() {

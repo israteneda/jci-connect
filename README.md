@@ -1,13 +1,15 @@
 # JCI Connect - Member Management Platform
 
-A modern member management platform for JCI Ukraine built with React, TypeScript, and Supabase.
+A modern member management platform for JCI chapters built with React, TypeScript, and Supabase.
+
+**Note:** This system is designed for single-chapter deployments. Each chapter deploys their own independent instance.
 
 ## 🚀 Features
 
 - **Authentication**: Secure login with Supabase Auth
 - **Member Management**: Full CRUD operations for members
-- **Chapter Management**: Organize members by chapters
-- **Role-Based Access**: Admin, Member, and Candidate roles
+- **Board Positions**: Track local, national, and international leadership roles
+- **Role-Based Access**: Admin, Senator, Member, and Candidate roles
 - **n8n Integration**: Automatic webhook triggers for workflows
 - **Dashboard**: Real-time statistics and insights
 - **Responsive Design**: Works on desktop, tablet, and mobile
@@ -95,10 +97,9 @@ The app will open at `http://localhost:5173`
 ## 🗄️ Database Schema
 
 ### Tables
-- **users** - User accounts (extends Supabase Auth)
-- **profiles** - User profile information
-- **memberships** - Member-specific data
-- **chapters** - Organization chapters
+- **profiles** - User profile information (extends Supabase Auth)
+- **memberships** - Membership details and status
+- **board_positions** - Leadership positions at local, national, and international levels
 
 See the ERD diagram in docs for visual representation.
 

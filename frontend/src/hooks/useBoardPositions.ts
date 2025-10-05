@@ -2,13 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database.types'
 
-type BoardPosition = Database['public']['Tables']['board_positions']['Row'] & {
-  chapters?: {
-    name: string
-    city: string
-    country: string
-  } | null
-}
+type BoardPosition = Database['public']['Tables']['board_positions']['Row']
 
 type BoardPositionInsert = Database['public']['Tables']['board_positions']['Insert']
 type BoardPositionUpdate = Database['public']['Tables']['board_positions']['Update']
@@ -16,7 +10,7 @@ type BoardPositionUpdate = Database['public']['Tables']['board_positions']['Upda
 /**
  * Hook for managing board positions
  * 
- * Provides CRUD operations for member board positions at chapter, national, and international levels
+ * Provides CRUD operations for member board positions at local, national, and international levels
  */
 export function useBoardPositions(userId?: string) {
   const queryClient = useQueryClient()
@@ -31,14 +25,7 @@ export function useBoardPositions(userId?: string) {
 
       const { data, error } = await supabase
         .from('board_positions')
-        .select(`
-          *,
-          chapters (
-            name,
-            city,
-            country
-          )
-        `)
+        .select('*')
         .eq('user_id', userId)
         .eq('is_active', true)
         .order('level', { ascending: true })
@@ -60,14 +47,7 @@ export function useBoardPositions(userId?: string) {
 
       const { data, error } = await supabase
         .from('board_positions')
-        .select(`
-          *,
-          chapters (
-            name,
-            city,
-            country
-          )
-        `)
+        .select('*')
         .eq('user_id', userId)
         .order('is_active', { ascending: false })
         .order('created_at', { ascending: false })
@@ -194,9 +174,9 @@ export function useBoardPositions(userId?: string) {
 /**
  * Helper function to get badge color based on position level
  */
-export function getPositionLevelColor(level: 'chapter' | 'national' | 'international') {
+export function getPositionLevelColor(level: 'local' | 'national' | 'international') {
   switch (level) {
-    case 'chapter':
+    case 'local':
       return 'bg-blue-100 text-blue-800'
     case 'national':
       return 'bg-green-100 text-green-800'
@@ -212,11 +192,6 @@ export function getPositionLevelColor(level: 'chapter' | 'national' | 'internati
  */
 export function formatPositionDisplay(position: BoardPosition): string {
   const level = position.level.charAt(0).toUpperCase() + position.level.slice(1)
-  
-  if (position.level === 'chapter' && position.chapters) {
-    return `${position.position_title} - ${position.chapters.name}`
-  }
-  
   return `${position.position_title} (${level})`
 }
 

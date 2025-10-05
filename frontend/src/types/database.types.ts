@@ -73,7 +73,6 @@ export interface Database {
           status: 'active' | 'expired' | 'suspended'
           start_date: string
           expiry_date: string
-          chapter_id: string
           member_number: string
           payment_status: 'paid' | 'pending' | 'overdue'
           annual_fee: number | null
@@ -87,7 +86,6 @@ export interface Database {
           status?: 'active' | 'expired' | 'suspended'
           start_date: string
           expiry_date: string
-          chapter_id: string
           member_number: string
           payment_status?: 'paid' | 'pending' | 'overdue'
           annual_fee?: number | null
@@ -101,57 +99,9 @@ export interface Database {
           status?: 'active' | 'expired' | 'suspended'
           start_date?: string
           expiry_date?: string
-          chapter_id?: string
           member_number?: string
           payment_status?: 'paid' | 'pending' | 'overdue'
           annual_fee?: number | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      chapters: {
-        Row: {
-          id: string
-          name: string
-          city: string
-          country: string
-          description: string | null
-          president_id: string | null
-          status: 'active' | 'inactive'
-          email: string | null
-          phone: string | null
-          website: string | null
-          member_count: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          city: string
-          country: string
-          description?: string | null
-          president_id?: string | null
-          status?: 'active' | 'inactive'
-          email?: string | null
-          phone?: string | null
-          website?: string | null
-          member_count?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          city?: string
-          country?: string
-          description?: string | null
-          president_id?: string | null
-          status?: 'active' | 'inactive'
-          email?: string | null
-          phone?: string | null
-          website?: string | null
-          member_count?: number
           created_at?: string
           updated_at?: string
         }
@@ -161,8 +111,7 @@ export interface Database {
           id: string
           user_id: string
           position_title: string
-          level: 'chapter' | 'national' | 'international'
-          chapter_id: string | null
+          level: 'local' | 'national' | 'international'
           start_date: string | null
           end_date: string | null
           is_active: boolean
@@ -173,8 +122,7 @@ export interface Database {
           id?: string
           user_id: string
           position_title: string
-          level: 'chapter' | 'national' | 'international'
-          chapter_id?: string | null
+          level: 'local' | 'national' | 'international'
           start_date?: string | null
           end_date?: string | null
           is_active?: boolean
@@ -185,8 +133,7 @@ export interface Database {
           id?: string
           user_id?: string
           position_title?: string
-          level?: 'chapter' | 'national' | 'international'
-          chapter_id?: string | null
+          level?: 'local' | 'national' | 'international'
           start_date?: string | null
           end_date?: string | null
           is_active?: boolean

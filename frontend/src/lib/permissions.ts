@@ -5,7 +5,7 @@
  * that can be extended for different organizations and roles.
  * 
  * Design Philosophy:
- * - Resource-based: Permissions are grouped by resource (members, chapters, etc.)
+ * - Resource-based: Permissions are grouped by resource (members, reports, etc.)
  * - Action-level: Each resource has specific actions (create, read, update, delete)
  * - Role-based: Permissions are assigned to roles, not individual users
  * - Extensible: Easy to add new roles, resources, or actions
@@ -21,9 +21,9 @@ export type Action = 'create' | 'read' | 'update' | 'delete';
 
 export type Resource = 
   | 'members' 
-  | 'chapters' 
   | 'senators'
   | 'memberships'
+  | 'board_positions'
   | 'settings'
   | 'reports'
   | 'profile';
@@ -60,8 +60,8 @@ export const PERMISSIONS: Permissions = {
   admin: {
     members: ['create', 'read', 'update', 'delete'],
     senators: ['create', 'read', 'update', 'delete'],
-    chapters: ['create', 'read', 'update', 'delete'],
     memberships: ['create', 'read', 'update', 'delete'],
+    board_positions: ['create', 'read', 'update', 'delete'],
     settings: ['read', 'update'],
     reports: ['create', 'read'],
     profile: ['read', 'update'],
@@ -70,24 +70,24 @@ export const PERMISSIONS: Permissions = {
   /**
    * SENATOR: Enhanced member with additional privileges
    * Senators are members 40+ years old approved by the international organization
-   * They remain part of their local chapter but have elevated access
+   * They have elevated access to view organizational information
    */
   senator: {
     members: ['read'], // Can view all member profiles
     senators: ['read'], // Can view other senators
-    chapters: ['read'], // Can view all chapters
     memberships: ['read'], // Can view membership information
+    board_positions: ['read'], // Can view board positions
     reports: ['read'], // Access to reports and analytics
     profile: ['read', 'update'], // Can manage own profile
   },
 
   /**
-   * MEMBER: Active chapter member
+   * MEMBER: Active organization member
    * Standard member with access to community resources
    */
   member: {
     members: ['read'], // Can view other members
-    chapters: ['read'], // Can view chapters
+    board_positions: ['read'], // Can view board positions
     profile: ['read', 'update'], // Can manage own profile
   },
 
@@ -159,7 +159,7 @@ export function getRolePermissions(role: Role): ResourcePermissions {
  * @example
  * ```typescript
  * canAccessResource('member', 'members'); // true
- * canAccessResource('candidate', 'chapters'); // false
+ * canAccessResource('candidate', 'members'); // false
  * ```
  */
 export function canAccessResource(role: Role, resource: Resource): boolean {

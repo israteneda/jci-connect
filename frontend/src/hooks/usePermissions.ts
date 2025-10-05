@@ -64,8 +64,8 @@ export function usePermissions() {
    * ```typescript
    * const { canAccess } = usePermissions();
    * 
-   * if (canAccess('chapters')) {
-   *   // Show chapters section
+   * if (canAccess('board_positions')) {
+   *   // Show board positions section
    * }
    * ```
    */

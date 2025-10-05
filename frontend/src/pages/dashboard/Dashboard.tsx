@@ -1,22 +1,19 @@
 import { useMembers } from '@/hooks/useMembers'
-import { useChapters } from '@/hooks/useChapters'
-import { Users, Building2, UserCheck, UserX, Award } from 'lucide-react'
+import { Users, UserCheck, UserX, Award } from 'lucide-react'
 
 export function Dashboard() {
   const { members, isLoading: membersLoading } = useMembers()
-  const { chapters, isLoading: chaptersLoading } = useChapters()
 
   const stats = {
     totalMembers: members?.length || 0,
     activeMembers: members?.filter(m => m.memberships?.status === 'active').length || 0,
     senators: members?.filter(m => m.role === 'senator').length || 0,
     expiredMembers: members?.filter(m => m.memberships?.status === 'expired').length || 0,
-    totalChapters: chapters?.length || 0,
   }
 
   const recentMembers = members?.slice(0, 5) || []
 
-  if (membersLoading || chaptersLoading) {
+  if (membersLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
@@ -29,7 +26,7 @@ export function Dashboard() {
       <h1 className="text-3xl font-bold text-gray-900 mb-6">Dashboard</h1>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title="Total Members"
           value={stats.totalMembers}
@@ -53,12 +50,6 @@ export function Dashboard() {
           value={stats.expiredMembers}
           icon={UserX}
           color="red"
-        />
-        <StatCard
-          title="Chapters"
-          value={stats.totalChapters}
-          icon={Building2}
-          color="purple"
         />
       </div>
 
@@ -85,10 +76,10 @@ export function Dashboard() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-medium text-navy">
-                    {member.memberships.chapters.name}
+                    {member.memberships.member_number}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {member.memberships.member_number}
+                    {member.memberships.membership_type}
                   </p>
                 </div>
               </div>

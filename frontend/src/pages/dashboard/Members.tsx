@@ -107,7 +107,7 @@ export function Members() {
                 Member #
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Chapter
+                Membership Type
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -152,7 +152,7 @@ export function Members() {
                     <div className="text-sm text-gray-900">{member.memberships?.member_number || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{member.memberships?.chapters?.name || 'N/A'}</div>
+                    <div className="text-sm text-gray-900 capitalize">{member.memberships?.membership_type || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${

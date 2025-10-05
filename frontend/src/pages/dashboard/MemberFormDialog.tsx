@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useMembers } from '@/hooks/useMembers'
-import { useChapters } from '@/hooks/useChapters'
 import { X } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -11,7 +10,6 @@ interface MemberFormDialogProps {
 
 export function MemberFormDialog({ open, onOpenChange }: MemberFormDialogProps) {
   const { createMember } = useMembers()
-  const { chapters } = useChapters()
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -22,7 +20,7 @@ export function MemberFormDialog({ open, onOpenChange }: MemberFormDialogProps) 
     
     try {
       const role = formData.get('role') as string
-      const chapterId = formData.get('chapter_id') as string
+      const hasMembership = formData.get('has_membership') === 'true'
 
       await createMember.mutateAsync({
         email: formData.get('email') as string,
@@ -33,12 +31,11 @@ export function MemberFormDialog({ open, onOpenChange }: MemberFormDialogProps) 
         phone: formData.get('phone') as string || undefined,
         city: formData.get('city') as string || undefined,
         country: formData.get('country') as string || undefined,
-        // Only include membership data if chapter is selected
-        chapter_id: chapterId || undefined,
-        membership_type: chapterId ? (formData.get('membership_type') as any) : undefined,
-        start_date: chapterId ? (formData.get('start_date') as string) : undefined,
-        expiry_date: chapterId ? (formData.get('expiry_date') as string) : undefined,
-        annual_fee: chapterId ? (Number(formData.get('annual_fee')) || undefined) : undefined,
+        // Only include membership data if enabled
+        membership_type: hasMembership ? (formData.get('membership_type') as any) : undefined,
+        start_date: hasMembership ? (formData.get('start_date') as string) : undefined,
+        expiry_date: hasMembership ? (formData.get('expiry_date') as string) : undefined,
+        annual_fee: hasMembership ? (Number(formData.get('annual_fee')) || undefined) : undefined,
       })
 
       const userType = role === 'candidate' ? 'Candidate' : role === 'admin' ? 'Admin' : 'Member'
@@ -144,7 +141,6 @@ export function MemberFormDialog({ open, onOpenChange }: MemberFormDialogProps) 
                 <input
                   type="text"
                   name="country"
-                  defaultValue="Ukraine"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent outline-none"
                 />
               </div>
@@ -176,27 +172,22 @@ export function MemberFormDialog({ open, onOpenChange }: MemberFormDialogProps) 
 
           {/* Membership Information */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Membership Information (Optional for Admins)</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Membership Information</h3>
+            <div className="mb-4">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="has_membership"
+                  value="true"
+                  defaultChecked
+                  className="rounded border-gray-300 text-navy focus:ring-navy"
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  Create membership record (uncheck for admins without membership)
+                </span>
+              </label>
+            </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Chapter (Optional for Candidates/Admins)
-                </label>
-                <select
-                  name="chapter_id"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent outline-none"
-                >
-                  <option value="">No chapter (Candidate or Admin only)</option>
-                  {chapters?.map((chapter) => (
-                    <option key={chapter.id} value={chapter.id}>
-                      {chapter.name} ({chapter.city}, {chapter.country})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Leave empty for candidates or admins without membership
-                </p>
-              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Membership Type *

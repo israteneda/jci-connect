@@ -6,9 +6,7 @@ import type { Database } from '@/types/database.types'
 
 type Member = Database['public']['Tables']['profiles']['Row'] & {
   email?: string // From auth.users
-  memberships: Database['public']['Tables']['memberships']['Row'] & {
-    chapters: Database['public']['Tables']['chapters']['Row']
-  }
+  memberships: Database['public']['Tables']['memberships']['Row']
 }
 
 interface CreateMemberData {
@@ -21,7 +19,6 @@ interface CreateMemberData {
   date_of_birth?: string
   city?: string
   country?: string
-  chapter_id?: string  // Optional for candidates and admins without membership
   membership_type?: 'local' | 'national' | 'international'
   start_date?: string
   expiry_date?: string
@@ -36,13 +33,10 @@ export function useMembers() {
   const { data: members, isLoading, error } = useQuery({
     queryKey: ['members'],
     queryFn: async () => {
-      // Fetch memberships with chapters
+      // Fetch memberships
       const { data: memberships, error: membershipsError } = await supabase
         .from('memberships')
-        .select(`
-          *,
-          chapters(*)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (membershipsError) throw membershipsError
@@ -80,10 +74,7 @@ export function useMembers() {
           return {
             ...profile,
             email: email || null,
-            memberships: {
-              ...membership,
-              chapters: membership.chapters
-            }
+            memberships: membership
           } as Member
         })
       )
@@ -95,13 +86,10 @@ export function useMembers() {
 
   // Get single member
   const getMember = async (userId: string): Promise<Member> => {
-    // Fetch membership with chapter
+    // Fetch membership
     const membershipResult = await supabase
       .from('memberships')
-      .select(`
-        *,
-        chapters(*)
-      `)
+      .select('*')
       .eq('user_id', userId)
       .single()
 
@@ -128,10 +116,7 @@ export function useMembers() {
     const member: Member = {
       ...profileData,
       email: emailResult.data || null,
-      memberships: {
-        ...membershipData,
-        chapters: membershipData.chapters
-      }
+      memberships: membershipData
     }
 
     return member
@@ -175,17 +160,11 @@ export function useMembers() {
 
       let memberNumber: string | undefined
 
-      // 3. Create membership (only if chapter_id is provided)
-      if (memberData.chapter_id && memberData.membership_type && memberData.start_date && memberData.expiry_date) {
-        // Get chapter info for member number
-        const { data: chapter } = await supabase
-          .from('chapters')
-          .select('city')
-          .eq('id', memberData.chapter_id)
-          .single() as any
-
+      // 3. Create membership (if membership data is provided)
+      if (memberData.membership_type && memberData.start_date && memberData.expiry_date) {
+        // Generate member number
         memberNumber = generateMemberNumber(
-          chapter?.city.substring(0, 3).toUpperCase() || 'UA'
+          memberData.city?.substring(0, 3).toUpperCase() || 'JCI'
         )
 
         // Create membership
@@ -193,7 +172,6 @@ export function useMembers() {
           .from('memberships')
           .insert({
             user_id: userId,
-            chapter_id: memberData.chapter_id,
             membership_type: memberData.membership_type,
             start_date: memberData.start_date,
             expiry_date: memberData.expiry_date,
@@ -204,11 +182,6 @@ export function useMembers() {
           } as any)
 
         if (membershipError) throw membershipError
-
-        // Update chapter member count
-        await (supabase.rpc as any)('increment_chapter_members', {
-          chapter_id: memberData.chapter_id,
-        })
       }
 
       // 4. Trigger n8n webhook
@@ -220,7 +193,6 @@ export function useMembers() {
         last_name: memberData.last_name,
         phone: memberData.phone,
         member_number: memberNumber,
-        chapter_id: memberData.chapter_id,
         membership_type: memberData.membership_type,
       })
 
@@ -228,7 +200,6 @@ export function useMembers() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] })
-      queryClient.invalidateQueries({ queryKey: ['chapters'] })
     },
   })
 
@@ -292,13 +263,6 @@ export function useMembers() {
   // Delete member using Supabase client
   const deleteMember = useMutation({
     mutationFn: async (userId: string) => {
-      // Get chapter_id before deleting
-      const { data: membership } = await supabase
-        .from('memberships')
-        .select('chapter_id')
-        .eq('user_id', userId)
-        .single() as any
-
       // Delete profile (cascades from auth.users deletion)
       const { error: profileError } = await supabase
         .from('profiles')
@@ -311,19 +275,11 @@ export function useMembers() {
       const { error } = await supabase.auth.admin.deleteUser(userId)
       if (error) throw error
 
-      // Update chapter member count
-      if (membership?.chapter_id) {
-        await (supabase.rpc as any)('decrement_chapter_members', {
-          chapter_id: membership.chapter_id,
-        })
-      }
-
       // Trigger n8n webhook
       await triggerN8nWebhook('member.deleted', { user_id: userId })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] })
-      queryClient.invalidateQueries({ queryKey: ['chapters'] })
     },
   })
 

@@ -109,10 +109,6 @@ export function MemberDetail() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Membership Details</h2>
             <div className="space-y-3">
               <div>
-                <p className="text-sm text-gray-600">Chapter</p>
-                <p className="font-medium">{member.memberships.chapters.name}</p>
-              </div>
-              <div>
                 <p className="text-sm text-gray-600">Membership Type</p>
                 <p className="font-medium capitalize">{member.memberships.membership_type}</p>
               </div>
@@ -148,11 +144,6 @@ export function MemberDetail() {
                       {position.level}
                     </span>
                   </div>
-                  {position.level === 'chapter' && position.chapters && (
-                    <p className="text-sm text-gray-600 mb-2">
-                      {position.chapters.name}, {position.chapters.city}
-                    </p>
-                  )}
                   {position.start_date && (
                     <p className="text-xs text-gray-500">
                       Since {formatDate(position.start_date)}

@@ -3,22 +3,18 @@
 -- Run this after the initial migration
 -- =====================================================
 
--- Insert chapters for Canada
-INSERT INTO public.chapters (name, city, country, description, status) VALUES
-  ('JCI Ottawa', 'Ottawa', 'Canada', 'Junior Chamber International Ottawa - Capital city innovation leaders', 'active')
-ON CONFLICT DO NOTHING;
-
--- Insert chapters for Ecuador
-INSERT INTO public.chapters (name, city, country, description, status) VALUES
-  ('JCI Ambato', 'Ambato', 'Ecuador', 'Junior Chamber International Ambato - Agricultural innovation and entrepreneurship', 'active')
-ON CONFLICT DO NOTHING;
+-- This system is designed for single-chapter installations
+-- Each chapter deploys their own instance
 
 -- Note: Admin users should be created through Supabase Auth Dashboard
 -- After creating a user, update their role:
 -- UPDATE public.profiles SET role = 'admin', status = 'active' WHERE id = 'user-id-here';
 
--- Note: To create a member who is also a chapter president:
--- 1. Create user in Auth Dashboard
--- 2. Set role to 'member' in profiles table
--- 3. Create membership record
--- 4. Update chapter.president_id to reference the user
+-- Example: Create a test member with membership
+-- First create user in Auth Dashboard, then:
+-- INSERT INTO public.memberships (user_id, membership_type, status, start_date, expiry_date, member_number, payment_status, annual_fee)
+-- VALUES ('user-id-here', 'local', 'active', '2025-01-01', '2025-12-31', 'M-001', 'paid', 100.00);
+
+-- Example: Add a board position for a member
+-- INSERT INTO public.board_positions (user_id, position_title, level, start_date, is_active)
+-- VALUES ('user-id-here', 'President', 'local', '2025-01-01', true);
