@@ -1,0 +1,1 @@
+Check the design system images and let's create a vite react router project for a membership/community/crm platform to connect it with Evolve API and resend and supabase for authorization and database
