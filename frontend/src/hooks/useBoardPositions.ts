@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database.types'
 
 type BoardPosition = Database['public']['Tables']['board_positions']['Row']
-
 type BoardPositionInsert = Database['public']['Tables']['board_positions']['Insert']
 type BoardPositionUpdate = Database['public']['Tables']['board_positions']['Update']
 
@@ -86,7 +85,7 @@ export function useBoardPositions(userId?: string) {
     mutationFn: async ({ id, updates }: { id: string; updates: BoardPositionUpdate }) => {
       const { data, error } = await supabase
         .from('board_positions')
-        .update(updates as any)
+        .update(updates)
         .eq('id', id)
         .select()
         .single()
@@ -108,7 +107,7 @@ export function useBoardPositions(userId?: string) {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('board_positions')
-        .update({ is_active: false, end_date: new Date().toISOString().split('T')[0] } as any)
+        .update({ is_active: false, end_date: new Date().toISOString().split('T')[0] })
         .eq('id', id)
 
       if (error) throw error
@@ -146,7 +145,7 @@ export function useBoardPositions(userId?: string) {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('board_positions')
-        .update({ is_active: true, end_date: null } as any)
+        .update({ is_active: true, end_date: null })
         .eq('id', id)
 
       if (error) throw error

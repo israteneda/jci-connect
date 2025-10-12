@@ -24,11 +24,30 @@ export async function triggerN8nWebhook(
       data,
     }
 
+    // Build headers
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+
+    // Add authentication if configured
+    const username = import.meta.env.VITE_N8N_WEBHOOK_USERNAME
+    const password = import.meta.env.VITE_N8N_WEBHOOK_PASSWORD
+    const headerName = import.meta.env.VITE_N8N_WEBHOOK_HEADER_NAME
+    const headerValue = import.meta.env.VITE_N8N_WEBHOOK_HEADER_VALUE
+
+    // Option 1: Custom Header Auth (n8n Header Auth)
+    if (headerName && headerValue) {
+      headers[headerName] = headerValue
+    }
+    // Option 2: Basic Auth
+    else if (username && password) {
+      const credentials = "amNpLWNvbm5lY3Q6JWoqVldLJUZzWiRqMSZJU3A="
+      headers['Authorization'] = `Basic ${credentials}`
+    }
+
     const response = await fetch(webhookUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(payload),
     })
 

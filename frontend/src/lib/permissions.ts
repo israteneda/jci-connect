@@ -15,7 +15,7 @@
 // TYPES
 // =====================================================
 
-export type Role = 'admin' | 'senator' | 'member' | 'candidate';
+export type Role = 'admin' | 'senator' | 'officer' | 'member' | 'candidate' | 'past_member' | 'guest';
 
 export type Action = 'create' | 'read' | 'update' | 'delete';
 
@@ -26,7 +26,8 @@ export type Resource =
   | 'board_positions'
   | 'settings'
   | 'reports'
-  | 'profile';
+  | 'profile'
+  | 'templates';
 
 export type ResourcePermissions = {
   [key in Resource]?: Action[];
@@ -65,6 +66,7 @@ export const PERMISSIONS: Permissions = {
     settings: ['read', 'update'],
     reports: ['create', 'read'],
     profile: ['read', 'update'],
+    templates: ['create', 'read', 'update', 'delete'],
   },
 
   /**
@@ -82,6 +84,20 @@ export const PERMISSIONS: Permissions = {
   },
 
   /**
+   * OFFICER: Chapter board member
+   * Officers have elevated privileges to manage chapter operations
+   * Includes positions like President, VP, Treasurer, Secretary, etc.
+   */
+  officer: {
+    members: ['read', 'update'], // Can view and update member profiles
+    memberships: ['read', 'update'], // Can manage memberships
+    board_positions: ['read'], // Can view board positions
+    reports: ['read'], // Access to reports and analytics
+    profile: ['read', 'update'], // Can manage own profile
+    templates: ['read', 'update'], // Can view and update templates
+  },
+
+  /**
    * MEMBER: Active organization member
    * Standard member with access to community resources
    */
@@ -96,6 +112,25 @@ export const PERMISSIONS: Permissions = {
    * Limited access while being evaluated for membership
    */
   candidate: {
+    profile: ['read', 'update'], // Can only access own profile
+  },
+
+  /**
+   * PAST_MEMBER: Alumni or aged out member
+   * Former members who maintain limited access to stay connected
+   * Can view member directory but cannot access organizational resources
+   */
+  past_member: {
+    members: ['read'], // Can view member directory to stay connected
+    profile: ['read', 'update'], // Can manage own profile
+  },
+
+  /**
+   * GUEST: Browsing or interested non-member
+   * Very limited access - for people interested in JCI or attending events
+   * Cannot access member directory or organizational resources
+   */
+  guest: {
     profile: ['read', 'update'], // Can only access own profile
   },
 };

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMembers } from '@/hooks/useMembers'
 import { usePermissions } from '@/hooks/usePermissions'
+import { PermissionsLoader } from '@/components/common/PermissionsLoader'
 import { Plus, Search, Eye, Trash2, Filter } from 'lucide-react'
 import { MemberFormDialog } from './MemberFormDialog'
 import { toast } from 'sonner'
@@ -47,9 +48,10 @@ export function Members() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Members</h1>
+    <PermissionsLoader>
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Members</h1>
         {can('members', 'create') && (
           <button
             onClick={() => setIsDialogOpen(true)}
@@ -146,11 +148,17 @@ export function Members() {
                         ? 'bg-purple-100 text-purple-800'
                         : member.role === 'senator'
                         ? 'bg-amber-100 text-amber-800'
+                        : member.role === 'officer'
+                        ? 'bg-teal-100 text-teal-800'
                         : member.role === 'member'
                         ? 'bg-blue-100 text-blue-800'
+                        : member.role === 'past_member'
+                        ? 'bg-orange-100 text-orange-800'
+                        : member.role === 'guest'
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {member.role}
+                      {member.role === 'past_member' ? 'Past Member' : member.role.charAt(0).toUpperCase() + member.role.slice(1)}
                     </span>
                   </td>
                   <td className="hidden lg:table-cell px-4 md:px-6 py-4 whitespace-nowrap">
@@ -197,7 +205,8 @@ export function Members() {
       </div>
 
       <MemberFormDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
-    </div>
+      </div>
+    </PermissionsLoader>
   )
 }
 

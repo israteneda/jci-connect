@@ -1,21 +1,46 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/hooks/useAuth'
+import { useFormPersistence } from '@/hooks/useFormPersistence'
+import { loginSchema, type LoginFormData } from '@/lib/validations/auth'
 import { toast } from 'sonner'
+import { Trash2 } from 'lucide-react'
 
 export function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const { signIn } = useAuth()
   const navigate = useNavigate()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  })
+
+  // Persist only email, exclude password for security
+  const { clearStoredData } = useFormPersistence({
+    watch,
+    setValue,
+    storageKey: 'jci-login-form',
+    excludeFields: ['password'],
+  })
+
+  const onSubmit = async (data: LoginFormData) => {
     setLoading(true)
 
     try {
-      await signIn(email, password)
+      await signIn(data.email, data.password)
+      clearStoredData() // Clear saved email after successful login
       toast.success('Welcome back!')
       navigate('/dashboard')
     } catch (error: any) {
@@ -23,6 +48,12 @@ export function Login() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleClearSavedData = () => {
+    clearStoredData()
+    setValue('email', '')
+    toast.success('Saved data cleared')
   }
 
   return (
@@ -33,7 +64,7 @@ export function Login() {
           <p className="text-gray-600">Member Management Platform</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
               Email Address
@@ -41,12 +72,15 @@ export function Login() {
             <input
               id="email"
               type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent outline-none transition"
+              {...register('email')}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent outline-none transition ${
+                errors.email ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="your@email.com"
             />
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+            )}
           </div>
 
           <div>
@@ -56,12 +90,15 @@ export function Login() {
             <input
               id="password"
               type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent outline-none transition"
+              {...register('password')}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent outline-none transition ${
+                errors.password ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="••••••••"
             />
+            {errors.password && (
+              <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+            )}
           </div>
 
           <button
@@ -70,6 +107,15 @@ export function Login() {
             className="w-full bg-navy hover:bg-navy-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleClearSavedData}
+            className="w-full flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            <Trash2 className="h-4 w-4" />
+            Clear saved email
           </button>
         </form>
 

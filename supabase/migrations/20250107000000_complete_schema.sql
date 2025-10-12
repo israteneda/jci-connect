@@ -19,7 +19,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- =====================================================
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'candidate' CHECK (role IN ('admin', 'senator', 'member', 'candidate')),
+  role TEXT NOT NULL DEFAULT 'guest' CHECK (role IN ('admin', 'senator', 'officer', 'member', 'candidate', 'past_member', 'guest')),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended', 'pending')),
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 
 COMMENT ON TABLE public.profiles IS 'User profiles with personal information';
+COMMENT ON COLUMN public.profiles.role IS 'User role: admin (full access), senator (40+ approved member), officer (chapter board member), member (active), candidate (prospective), past_member (alumni/aged out), guest (browsing/interested)';
 COMMENT ON COLUMN public.profiles.address IS 'Full address: street, city, country';
 
 -- =====================================================
@@ -169,12 +170,12 @@ BEGIN
   WHERE id = auth.uid()
   LIMIT 1;
   
-  -- Return the role, or 'candidate' if not found
-  RETURN COALESCE(user_role, 'candidate');
+  -- Return the role, or 'guest' if not found
+  RETURN COALESCE(user_role, 'guest');
 EXCEPTION
   WHEN OTHERS THEN
-    -- Fallback to candidate role on any error
-    RETURN 'candidate';
+    -- Fallback to guest role on any error
+    RETURN 'guest';
 END;
 $$;
 
@@ -201,7 +202,7 @@ BEGIN
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'first_name', 'User'),
     COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'candidate'),
+    COALESCE(NEW.raw_user_meta_data->>'role', 'guest'),
     COALESCE(NEW.raw_user_meta_data->>'status', 'pending')
   );
   RETURN NEW;
@@ -234,6 +235,9 @@ CREATE TRIGGER set_chapter_settings_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 -- Trigger to create profile on user signup
+-- Drop trigger if it exists to avoid conflicts
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW

@@ -12,12 +12,13 @@ type Member = Database['public']['Tables']['profiles']['Row'] & {
 interface CreateMemberData {
   email: string
   password: string
-  role: 'admin' | 'member' | 'candidate'
+  role: 'guest' | 'prospective' | 'member' | 'admin'
   first_name: string
   last_name: string
   phone?: string
   date_of_birth?: string
   address?: string
+  diet_restrictions?: string
   membership_type?: 'local' | 'national' | 'international'
   payment_type?: 'annual' | 'monthly'
   start_date?: string
@@ -125,7 +126,10 @@ export function useMembers() {
   // Create member using Supabase client
   const createMember = useMutation({
     mutationFn: async (memberData: CreateMemberData) => {
-      // 1. Create auth user (profile is auto-created by trigger)
+      // 1. Create auth user
+      // Profile is auto-created by trigger: handle_new_user()
+      // NOTE: Email confirmation must be disabled in Supabase project settings
+      // Dashboard > Authentication > Email Auth > Enable email confirmations = OFF
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: memberData.email,
         password: memberData.password,
@@ -134,16 +138,51 @@ export function useMembers() {
             first_name: memberData.first_name,
             last_name: memberData.last_name,
             role: memberData.role,
+            status: memberData.role === 'prospective' ? 'pending' : 'active',
           },
+          emailRedirectTo: undefined, // Prevent confirmation email redirect
         },
       })
 
-      if (authError) throw authError
-      if (!authData.user) throw new Error('Failed to create user')
+      if (authError) {
+        // More descriptive error message
+        throw new Error(`Failed to create user: ${authError.message}`)
+      }
+      
+      if (!authData.user) {
+        throw new Error('Failed to create user - no user data returned')
+      }
 
       const userId = authData.user.id
 
-      // 2. Update profile with additional data
+      // 2. Wait for profile to be created by trigger and verify it exists
+      let profileExists = false
+      let retries = 0
+      const maxRetries = 10
+      
+      while (!profileExists && retries < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
+        // Use maybeSingle() instead of single() to avoid error when profile doesn't exist yet
+        const { data: profile, error: checkError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle()
+        
+        // If profile exists (not null) and no error, we're good
+        if (profile !== null && !checkError) {
+          profileExists = true
+        } else {
+          retries++
+        }
+      }
+
+      if (!profileExists) {
+        throw new Error('Profile creation timed out. Please check if the user was created in Supabase Auth and try again.')
+      }
+
+      // 3. Update profile with additional data
       const { error: profileError } = await (supabase
         .from('profiles')
         .update as any)({
@@ -151,15 +190,18 @@ export function useMembers() {
           phone: memberData.phone,
           date_of_birth: memberData.date_of_birth,
           address: memberData.address,
-          status: memberData.role === 'candidate' ? 'pending' : 'active',
+          diet_restrictions: memberData.diet_restrictions,
+          status: memberData.role === 'prospective' ? 'pending' : 'active',
         })
         .eq('id', userId)
 
-      if (profileError) throw profileError
+      if (profileError) {
+        throw new Error(`Failed to update profile: ${profileError.message}`)
+      }
 
       let memberNumber: string | undefined
 
-      // 3. Create membership (if membership data is provided)
+      // 4. Create membership (if membership data is provided)
       if (memberData.membership_type && memberData.start_date && memberData.expiry_date) {
         // Generate member number - use first 3 chars of address or fallback to JCI
         const addressPrefix = memberData.address?.split(',')[0]?.trim().substring(0, 3).toUpperCase() || 'JCI'
@@ -180,10 +222,12 @@ export function useMembers() {
             payment_status: 'pending',
           } as any)
 
-        if (membershipError) throw membershipError
+        if (membershipError) {
+          throw new Error(`Failed to create membership: ${membershipError.message}. User was created but membership creation failed. User ID: ${userId}`)
+        }
       }
 
-      // 4. Trigger n8n webhook
+      // 5. Trigger n8n webhook
       await triggerN8nWebhook('member.created', {
         user_id: userId,
         email: memberData.email,
@@ -262,17 +306,23 @@ export function useMembers() {
   // Delete member using Supabase client
   const deleteMember = useMutation({
     mutationFn: async (userId: string) => {
-      // Delete profile (cascades from auth.users deletion)
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId)
+      // Use secure database function to delete user
+      // This function checks admin permissions and cascades deletion
+      const result = await (supabase.rpc as any)('delete_user', {
+        target_user_id: userId
+      })
 
-      if (profileError) throw profileError
+      const data = result.data as { success: boolean; error?: string } | null
+      const error = result.error
 
-      // Delete auth user (admin only)
-      const { error } = await supabase.auth.admin.deleteUser(userId)
-      if (error) throw error
+      if (error) {
+        throw new Error(`Failed to delete user: ${error.message}`)
+      }
+
+      // Check if the function returned an error
+      if (data && !data.success) {
+        throw new Error(data.error || 'Failed to delete user')
+      }
 
       // Trigger n8n webhook
       await triggerN8nWebhook('member.deleted', { user_id: userId })

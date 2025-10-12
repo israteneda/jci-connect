@@ -105,8 +105,29 @@ export function useAuth() {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (mounted) {
+        console.log('🔄 Auth state changed:', event, session ? 'Session exists' : 'No session')
+        
+        // Handle different auth events
+        switch (event) {
+          case 'SIGNED_IN':
+            console.log('✅ User signed in')
+            break
+          case 'SIGNED_OUT':
+            console.log('❌ User signed out')
+            setUser(null)
+            break
+          case 'TOKEN_REFRESHED':
+            console.log('🔄 Token refreshed successfully')
+            break
+          case 'PASSWORD_RECOVERY':
+            console.log('🔑 Password recovery initiated')
+            break
+          default:
+            console.log('🔄 Auth event:', event)
+        }
+        
         await loadUserProfile(session?.user ?? null)
       }
     })

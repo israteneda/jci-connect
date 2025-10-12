@@ -31,7 +31,7 @@ import {
  * ```
  */
 export function usePermissions() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const userRole = (user?.role || 'candidate') as Role;
 
   /**
@@ -155,6 +155,8 @@ export function usePermissions() {
     isSenator,
     isMember,
     role: userRole,
+    loading,
+    isReady: !loading && user !== null,
   };
 }
 

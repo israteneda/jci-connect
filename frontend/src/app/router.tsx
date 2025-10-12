@@ -5,6 +5,7 @@ import { Login } from '@/pages/auth/Login'
 import { Dashboard } from '@/pages/dashboard/Dashboard'
 import { Members } from '@/pages/dashboard/Members'
 import { MemberDetail } from '@/pages/dashboard/MemberDetail'
+import { Templates } from '@/pages/dashboard/Templates'
 import { Settings } from '@/pages/dashboard/Settings'
 import { NotFound } from '@/pages/NotFound'
 
@@ -26,6 +27,7 @@ export function AppRouter() {
         <Route index element={<Dashboard />} />
         <Route path="members" element={<Members />} />
         <Route path="members/:id" element={<MemberDetail />} />
+        <Route path="templates" element={<Templates />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 

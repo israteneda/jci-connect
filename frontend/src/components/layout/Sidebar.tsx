@@ -1,12 +1,13 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Users, LayoutDashboard, X, ChevronLeft, ChevronRight, Shield, Award, UserCheck, UserCircle, Settings } from 'lucide-react'
+import { Users, LayoutDashboard, X, ChevronLeft, ChevronRight, Shield, Award, UserCheck, UserCircle, Settings, FileText } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { useChapterSettings } from '@/hooks/useChapterSettings'
+import { useOrganizationSettings } from '@/hooks/useOrganizationSettings'
 import { cn } from '@/lib/utils'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Members', href: '/dashboard/members', icon: Users },
+  { name: 'Templates', href: '/dashboard/templates', icon: FileText },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]
 
@@ -19,12 +20,12 @@ interface SidebarProps {
 export function Sidebar({ onClose, isCollapsed = false, onToggleCollapse }: SidebarProps) {
   const location = useLocation()
   const { user } = useAuth()
-  const { settings } = useChapterSettings()
+  const { settings } = useOrganizationSettings()
 
-  // Get chapter info
-  const chapterName = settings?.chapter_name || 'JCI Chapter'
-  const chapterLocation = settings?.chapter_city && settings?.chapter_country
-    ? `${settings.chapter_city}, ${settings.chapter_country}`
+  // Get organization info
+  const organizationName = settings?.organization_name || 'JCI Organization'
+  const organizationLocation = settings?.organization_city && settings?.organization_country
+    ? `${settings.organization_city}, ${settings.organization_country}`
     : 'Member Management'
 
   // Get user role info
@@ -32,7 +33,9 @@ export function Sidebar({ onClose, isCollapsed = false, onToggleCollapse }: Side
   const userName = user?.profile?.first_name && user?.profile?.last_name
     ? `${user.profile.first_name} ${user.profile.last_name}`
     : user?.email || 'User'
-  const formattedRole = userRole.charAt(0).toUpperCase() + userRole.slice(1)
+  const formattedRole = userRole === 'past_member'
+    ? 'Past Member'
+    : userRole.charAt(0).toUpperCase() + userRole.slice(1)
 
   // Get role icon and color
   const getRoleIcon = () => {
@@ -41,10 +44,16 @@ export function Sidebar({ onClose, isCollapsed = false, onToggleCollapse }: Side
         return <Shield className="h-5 w-5 text-purple-400" />
       case 'senator':
         return <Award className="h-5 w-5 text-amber-400" />
+      case 'officer':
+        return <Shield className="h-5 w-5 text-teal-400" />
       case 'member':
         return <UserCheck className="h-5 w-5 text-blue-400" />
       case 'candidate':
         return <UserCircle className="h-5 w-5 text-gray-400" />
+      case 'past_member':
+        return <UserCircle className="h-5 w-5 text-orange-400" />
+      case 'guest':
+        return <UserCircle className="h-5 w-5 text-green-400" />
       default:
         return <UserCircle className="h-5 w-5 text-gray-400" />
     }
@@ -56,10 +65,16 @@ export function Sidebar({ onClose, isCollapsed = false, onToggleCollapse }: Side
         return 'bg-purple-900/50 text-purple-300'
       case 'senator':
         return 'bg-amber-900/50 text-amber-300'
+      case 'officer':
+        return 'bg-teal-900/50 text-teal-300'
       case 'member':
         return 'bg-blue-900/50 text-blue-300'
       case 'candidate':
         return 'bg-gray-800 text-gray-300'
+      case 'past_member':
+        return 'bg-orange-900/50 text-orange-300'
+      case 'guest':
+        return 'bg-green-900/50 text-green-300'
       default:
         return 'bg-gray-800 text-gray-300'
     }
@@ -75,8 +90,8 @@ export function Sidebar({ onClose, isCollapsed = false, onToggleCollapse }: Side
       {/* Header with close button for mobile */}
       <div className="p-6 flex items-start justify-between">
         <div className={cn('transition-opacity duration-300', isCollapsed && 'opacity-0')}>
-          <h1 className="text-2xl font-bold text-aqua whitespace-nowrap">{chapterName}</h1>
-          <p className="text-sm text-specialGray mt-1 whitespace-nowrap">{chapterLocation}</p>
+          <h1 className="text-2xl font-bold text-aqua whitespace-nowrap">{organizationName}</h1>
+          <p className="text-sm text-specialGray mt-1 whitespace-nowrap">{organizationLocation}</p>
         </div>
         
         {/* Close button - only visible on mobile */}
