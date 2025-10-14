@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMembers } from '@/hooks/useMembers'
-import { useFormPersistence } from '@/hooks/useFormPersistence'
 import { memberSchema, type MemberFormData } from '@/lib/validations/member'
-import { X, Trash2 } from 'lucide-react'
+import { X } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface MemberFormDialogProps {
@@ -19,8 +18,6 @@ export function MemberFormDialog({ open, onOpenChange }: MemberFormDialogProps) 
   const {
     register,
     handleSubmit,
-    watch,
-    setValue,
     reset,
     formState: { errors },
   } = useForm<MemberFormData>({
@@ -29,27 +26,13 @@ export function MemberFormDialog({ open, onOpenChange }: MemberFormDialogProps) 
       first_name: '',
       last_name: '',
       email: '',
-      password: '',
+      password: undefined, // Make password optional
       phone_country_code: '+1',
       phone: '',
       date_of_birth: '',
       address: '',
-      role: 'guest',
       diet_restrictions: '',
-      has_membership: true,
-      payment_type: 'annual',
-      annual_fee: 100,
-      start_date: new Date().toISOString().split('T')[0],
-      expiry_date: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
     },
-  })
-
-  // Persist form data, excluding password for security
-  const { clearStoredData } = useFormPersistence({
-    watch,
-    setValue,
-    storageKey: 'jci-member-form',
-    excludeFields: ['password'],
   })
 
   const onSubmit = async (data: MemberFormData) => {
@@ -57,34 +40,21 @@ export function MemberFormDialog({ open, onOpenChange }: MemberFormDialogProps) 
 
     try {
       // Combine country code and phone number
-      const fullPhone = data.phone ? `${data.phone_country_code} ${data.phone}` : undefined
+      const fullPhone = data.phone ? `${data.phone_country_code}${data.phone}` : undefined
 
       await createMember.mutateAsync({
         email: data.email,
-        password: data.password,
-        role: data.role as any,
+        password: data.password || undefined, // Pass undefined if no password provided
+        role: 'guest', // Always create users as guests
         first_name: data.first_name,
         last_name: data.last_name,
         phone: fullPhone,
         date_of_birth: data.date_of_birth || undefined,
         address: data.address || undefined,
         diet_restrictions: data.diet_restrictions || undefined,
-        // Only include membership data if enabled
-        membership_type: data.has_membership ? 'local' : undefined,
-        payment_type: data.has_membership ? data.payment_type : undefined,
-        start_date: data.has_membership ? data.start_date : undefined,
-        expiry_date: data.has_membership ? data.expiry_date : undefined,
-        annual_fee: data.has_membership ? data.annual_fee : undefined,
       })
 
-      const userType = data.role === 'guest' ? 'Guest'
-        : data.role === 'prospective' ? 'Prospective Member'
-        : data.role === 'member' ? 'Member'
-        : data.role === 'admin' ? 'Admin'
-        : 'Guest'
-      
-      toast.success(`${userType} created successfully! n8n webhook triggered.`)
-      clearStoredData() // Clear saved data after successful submission
+      toast.success('Guest user created successfully! Welcome email sent.')
       reset() // Reset form
       onOpenChange(false)
     } catch (error: any) {
@@ -94,11 +64,6 @@ export function MemberFormDialog({ open, onOpenChange }: MemberFormDialogProps) 
     }
   }
 
-  const handleClearSavedData = () => {
-    clearStoredData()
-    reset()
-    toast.success('Saved form data cleared')
-  }
 
   const handleCancel = () => {
     onOpenChange(false)
@@ -179,7 +144,7 @@ export function MemberFormDialog({ open, onOpenChange }: MemberFormDialogProps) 
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password *
+                  Password
                 </label>
                 <input
                   type="password"
@@ -191,10 +156,13 @@ export function MemberFormDialog({ open, onOpenChange }: MemberFormDialogProps) 
                 {errors.password && (
                   <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
                 )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Optional: Password can be set later by the user
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone
+                  Phone *
                 </label>
                 <div className="flex gap-2">
                   <select
@@ -274,136 +242,21 @@ export function MemberFormDialog({ open, onOpenChange }: MemberFormDialogProps) 
             </div>
           </div>
 
-          {/* User Role */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">User Role</h3>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Role *
-              </label>
-              <select
-                {...register('role')}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent outline-none ${
-                  errors.role ? 'border-red-500' : 'border-gray-300'
-                }`}
-              >
-                <option value="guest">Guest</option>
-                <option value="prospective">Prospective</option>
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-              </select>
-              {errors.role && (
-                <p className="mt-1 text-xs text-red-600">{errors.role.message}</p>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                <strong>Guest:</strong> Browsing/interested. <strong>Prospective:</strong> Interested in joining JCI. <strong>Member:</strong> Active JCI member. <strong>Admin:</strong> Organization administrator with full access.
-              </p>
-            </div>
-          </div>
 
-          {/* Membership Information */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Membership Information</h3>
-            <div className="mb-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  {...register('has_membership')}
-                  className="rounded border-gray-300 text-navy focus:ring-navy"
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  Create membership record (uncheck for admins without membership)
-                </span>
-              </label>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Payment Type *
-                </label>
-                <select
-                  {...register('payment_type')}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent outline-none ${
-                    errors.payment_type ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="annual">Annual</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-                {errors.payment_type && (
-                  <p className="mt-1 text-xs text-red-600">{errors.payment_type.message}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fee Amount (USD) *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('annual_fee', { valueAsNumber: true })}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent outline-none ${
-                    errors.annual_fee ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {errors.annual_fee && (
-                  <p className="mt-1 text-xs text-red-600">{errors.annual_fee.message}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Date *
-                </label>
-                <input
-                  type="date"
-                  {...register('start_date')}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent outline-none ${
-                    errors.start_date ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {errors.start_date && (
-                  <p className="mt-1 text-xs text-red-600">{errors.start_date.message}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Expiry Date *
-                </label>
-                <input
-                  type="date"
-                  {...register('expiry_date')}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent outline-none ${
-                    errors.expiry_date ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {errors.expiry_date && (
-                  <p className="mt-1 text-xs text-red-600">{errors.expiry_date.message}</p>
-                )}
-              </div>
-            </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row justify-between gap-4 pt-4 border-t">
-            <button
-              type="button"
-              onClick={handleClearSavedData}
-              className="flex items-center justify-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              <Trash2 className="h-4 w-4" />
-              Clear saved data
-            </button>
+          <div className="flex justify-end gap-4 pt-4 border-t">
             <div className="flex gap-4">
               <button
                 type="button"
                 onClick={handleCancel}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2 bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                className="px-3 py-2 text-sm bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors disabled:opacity-50"
               >
                 {loading ? 'Creating...' : 'Create Member'}
               </button>

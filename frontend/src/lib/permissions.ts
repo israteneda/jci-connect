@@ -15,13 +15,12 @@
 // TYPES
 // =====================================================
 
-export type Role = 'admin' | 'senator' | 'officer' | 'member' | 'candidate' | 'past_member' | 'guest';
+export type Role = 'admin' | 'member' | 'prospective' | 'guest';
 
 export type Action = 'create' | 'read' | 'update' | 'delete';
 
 export type Resource = 
   | 'members' 
-  | 'senators'
   | 'memberships'
   | 'board_positions'
   | 'settings'
@@ -55,12 +54,11 @@ export type Permissions = {
  */
 export const PERMISSIONS: Permissions = {
   /**
-   * ADMIN: Full system access
-   * Can manage all resources and users
+   * ADMIN: Platform administrator (hidden from regular users)
+   * Full system access - can manage all resources and users
    */
   admin: {
     members: ['create', 'read', 'update', 'delete'],
-    senators: ['create', 'read', 'update', 'delete'],
     memberships: ['create', 'read', 'update', 'delete'],
     board_positions: ['create', 'read', 'update', 'delete'],
     settings: ['read', 'update'],
@@ -70,59 +68,22 @@ export const PERMISSIONS: Permissions = {
   },
 
   /**
-   * SENATOR: Enhanced member with additional privileges
-   * Senators are members 40+ years old approved by the international organization
-   * They have elevated access to view organizational information
-   */
-  senator: {
-    members: ['read'], // Can view all member profiles
-    senators: ['read'], // Can view other senators
-    memberships: ['read'], // Can view membership information
-    board_positions: ['read'], // Can view board positions
-    reports: ['read'], // Access to reports and analytics
-    profile: ['read', 'update'], // Can manage own profile
-  },
-
-  /**
-   * OFFICER: Chapter board member
-   * Officers have elevated privileges to manage chapter operations
-   * Includes positions like President, VP, Treasurer, Secretary, etc.
-   */
-  officer: {
-    members: ['read', 'update'], // Can view and update member profiles
-    memberships: ['read', 'update'], // Can manage memberships
-    board_positions: ['read'], // Can view board positions
-    reports: ['read'], // Access to reports and analytics
-    profile: ['read', 'update'], // Can manage own profile
-    templates: ['read', 'update'], // Can view and update templates
-  },
-
-  /**
    * MEMBER: Active organization member
    * Standard member with access to community resources
    */
   member: {
     members: ['read'], // Can view other members
+    memberships: ['read'], // Can view membership information
     board_positions: ['read'], // Can view board positions
     profile: ['read', 'update'], // Can manage own profile
   },
 
   /**
-   * CANDIDATE: Potential member
+   * PROSPECTIVE: Potential member
    * Limited access while being evaluated for membership
    */
-  candidate: {
+  prospective: {
     profile: ['read', 'update'], // Can only access own profile
-  },
-
-  /**
-   * PAST_MEMBER: Alumni or aged out member
-   * Former members who maintain limited access to stay connected
-   * Can view member directory but cannot access organizational resources
-   */
-  past_member: {
-    members: ['read'], // Can view member directory to stay connected
-    profile: ['read', 'update'], // Can manage own profile
   },
 
   /**
@@ -176,8 +137,8 @@ export function hasPermission(
  * 
  * @example
  * ```typescript
- * getRolePermissions('senator');
- * // Returns: { members: ['read'], senators: ['read'], ... }
+ * getRolePermissions('member');
+ * // Returns: { members: ['read'], memberships: ['read'], ... }
  * ```
  */
 export function getRolePermissions(role: Role): ResourcePermissions {
@@ -194,7 +155,7 @@ export function getRolePermissions(role: Role): ResourcePermissions {
  * @example
  * ```typescript
  * canAccessResource('member', 'members'); // true
- * canAccessResource('candidate', 'members'); // false
+ * canAccessResource('guest', 'members'); // false
  * ```
  */
 export function canAccessResource(role: Role, resource: Resource): boolean {

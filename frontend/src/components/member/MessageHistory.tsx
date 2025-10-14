@@ -6,7 +6,6 @@ import {
   CheckCircle, 
   XCircle, 
   Clock, 
-  Eye,
   Filter,
   Search
 } from 'lucide-react'
@@ -289,16 +288,6 @@ export function MessageHistory({ userId, canView = true }: MessageHistoryProps) 
                     </div>
                   </div>
                   
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedMessage(message)
-                    }}
-                    className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                    title="View Details"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </button>
                 </div>
               </div>
             ))}
@@ -406,7 +395,7 @@ export function MessageHistory({ userId, canView = true }: MessageHistoryProps) 
               <div className="flex justify-end mt-6">
                 <button
                   onClick={() => setSelectedMessage(null)}
-                  className="px-4 py-2 bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors"
+                  className="px-3 py-2 text-sm bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors"
                 >
                   Close
                 </button>

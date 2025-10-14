@@ -5,8 +5,11 @@ import { Login } from '@/pages/auth/Login'
 import { Dashboard } from '@/pages/dashboard/Dashboard'
 import { Members } from '@/pages/dashboard/Members'
 import { MemberDetail } from '@/pages/dashboard/MemberDetail'
+import { BoardMembers } from '@/pages/dashboard/BoardMembers'
+import { BoardPositionForm } from '@/pages/dashboard/BoardPositionForm'
 import { Templates } from '@/pages/dashboard/Templates'
-import { Settings } from '@/pages/dashboard/Settings'
+import TemplateEditor from '@/pages/dashboard/TemplateEditor'
+import { AdminData } from '@/pages/dashboard/AdminData'
 import { NotFound } from '@/pages/NotFound'
 
 export function AppRouter() {
@@ -27,8 +30,12 @@ export function AppRouter() {
         <Route index element={<Dashboard />} />
         <Route path="members" element={<Members />} />
         <Route path="members/:id" element={<MemberDetail />} />
+        <Route path="board-members" element={<BoardMembers />} />
+        <Route path="board-positions/new" element={<BoardPositionForm />} />
+        <Route path="board-positions/:id/edit" element={<BoardPositionForm isEditing />} />
         <Route path="templates" element={<Templates />} />
-        <Route path="settings" element={<Settings />} />
+        <Route path="templates/:templateId/edit" element={<TemplateEditor />} />
+        <Route path="admin-data" element={<AdminData />} />
       </Route>
 
       {/* Redirects */}

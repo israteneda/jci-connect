@@ -14,20 +14,27 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const loadingProfile = useRef(false)
+  const lastLoadedUserId = useRef<string | null>(null)
 
   const loadUserProfile = useCallback(async (authUser: User | null) => {
     if (!authUser) {
       setUser(null)
       loadingProfile.current = false
+      lastLoadedUserId.current = null
       return
     }
 
-    // Prevent duplicate fetches
-    if (loadingProfile.current) {
+    // Prevent duplicate fetches for the same user
+    if (loadingProfile.current || lastLoadedUserId.current === authUser.id) {
       return
     }
 
+    // Check if user is already loaded with correct role
+    if (user && user.id === authUser.id && user.role === 'admin') {
+      return
+    }
     loadingProfile.current = true
+    lastLoadedUserId.current = authUser.id
 
     try {
       // Create timeout promise (3 seconds as safety net)
@@ -49,11 +56,11 @@ export function useAuth() {
       ])
 
       if (error) {
-        console.error('Error fetching profile:', error)
-        // Set user without profile data if fetch fails
+        // Try to get role from user metadata as fallback
+        const userRole = authUser.user_metadata?.role || 'guest'
         setUser({
           ...authUser,
-          role: 'candidate',
+          role: userRole,
           profile: undefined,
         })
         return
@@ -61,17 +68,18 @@ export function useAuth() {
 
       // Profile loaded successfully
       const profileData = profile as any
+      const finalRole = profileData?.role || 'guest'
       setUser({
         ...authUser,
-        role: profileData?.role || 'candidate',
+        role: finalRole,
         profile: profileData,
       })
     } catch (error) {
-      console.error('Exception loading profile:', error)
-      // Set user without profile data on exception (includes timeout)
+      // Try to get role from user metadata as fallback
+      const userRole = authUser.user_metadata?.role || 'guest'
       setUser({
         ...authUser,
-        role: 'candidate',
+        role: userRole,
         profile: undefined,
       })
     } finally {
@@ -95,8 +103,7 @@ export function useAuth() {
           setLoading(false)
         }
       }
-    }).catch((error) => {
-      console.error('Error getting session:', error)
+    }).catch(() => {
       if (mounted) {
         setLoading(false)
       }
@@ -107,28 +114,24 @@ export function useAuth() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (mounted) {
-        console.log('🔄 Auth state changed:', event, session ? 'Session exists' : 'No session')
+        console.log('🔄 Auth state change:', event, 'User ID:', session?.user?.id)
         
         // Handle different auth events
         switch (event) {
-          case 'SIGNED_IN':
-            console.log('✅ User signed in')
-            break
           case 'SIGNED_OUT':
-            console.log('❌ User signed out')
             setUser(null)
             break
+          case 'SIGNED_IN':
           case 'TOKEN_REFRESHED':
-            console.log('🔄 Token refreshed successfully')
-            break
-          case 'PASSWORD_RECOVERY':
-            console.log('🔑 Password recovery initiated')
+            // Only load profile for the current user, not for newly created users
+            if (session?.user && (!user || user.id === session.user.id)) {
+              await loadUserProfile(session.user)
+            }
             break
           default:
-            console.log('🔄 Auth event:', event)
+            // Don't load profile for other events to prevent role switching
+            break
         }
-        
-        await loadUserProfile(session?.user ?? null)
       }
     })
 

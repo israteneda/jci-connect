@@ -158,7 +158,7 @@ export function MemberNotes({ userId, canEdit = false }: MemberNotesProps) {
           {canEdit && (
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors"
             >
               <Plus className="h-4 w-4" />
               Add Note
@@ -189,7 +189,7 @@ export function MemberNotes({ userId, canEdit = false }: MemberNotesProps) {
             {canEdit && (
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="mt-4 flex items-center gap-2 px-4 py-2 bg-navy text-white rounded-lg hover:bg-navy-600 transition-colors mx-auto"
+                className="mt-4 flex items-center gap-2 px-3 py-2 text-sm bg-navy text-white rounded-lg hover:bg-navy-600 transition-colors mx-auto"
               >
                 <Plus className="h-4 w-4" />
                 Add First Note
@@ -436,13 +436,13 @@ function NoteModal({ note, onClose, onSave }: NoteModalProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                className="px-3 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-2 px-4 py-2 bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-sm bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors"
               >
                 <Save className="h-4 w-4" />
                 {note ? 'Update Note' : 'Create Note'}

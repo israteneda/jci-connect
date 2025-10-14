@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useMembers } from '@/hooks/useMembers'
 import { useBoardPositions, getPositionLevelColor } from '@/hooks/useBoardPositions'
 import { usePermissions } from '@/hooks/usePermissions'
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Award, Briefcase, Clock, MessageSquare, FileText, Send } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Briefcase, Clock, MessageSquare, FileText } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { InteractionTimeline } from '@/components/member/InteractionTimeline'
 import { MessageHistory } from '@/components/member/MessageHistory'
@@ -61,47 +61,31 @@ export function MemberDetail() {
               <h1 className="text-3xl font-bold text-gray-900">
                 {member.first_name} {member.last_name}
               </h1>
-              <p className="text-gray-600 mt-1">{member.memberships.member_number}</p>
+              <p className="text-gray-600 mt-1">{member.memberships?.member_number || 'No membership'}</p>
               <div className="flex gap-2 mt-2">
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  member.role === 'admin'
+                        member.role === 'admin'
                     ? 'bg-purple-100 text-purple-800'
-                    : member.role === 'senator'
-                    ? 'bg-amber-100 text-amber-800'
-                    : member.role === 'officer'
-                    ? 'bg-teal-100 text-teal-800'
                     : member.role === 'member'
                     ? 'bg-blue-100 text-blue-800'
-                    : member.role === 'past_member'
-                    ? 'bg-orange-100 text-orange-800'
+                    : member.role === 'prospective'
+                    ? 'bg-amber-100 text-amber-800'
                     : member.role === 'guest'
                     ? 'bg-green-100 text-green-800'
                     : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {member.role === 'past_member' ? 'Past Member' : member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                  {member.role === 'prospective' ? 'Prospective' : member.role.charAt(0).toUpperCase() + member.role.slice(1)}
                 </span>
-                {member.role === 'senator' && (
-                  <span className="flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 rounded-full text-xs">
-                    <Award className="h-3 w-3" />
-                    Senator Status
-                  </span>
-                )}
               </div>
             </div>
             <div className="flex items-center gap-3">
               <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                member.memberships.status === 'active'
+                member.memberships?.status === 'active'
                   ? 'bg-green-100 text-green-800'
-                  : 'bg-red-100 text-red-800'
+                  : 'bg-gray-100 text-gray-800'
               }`}>
-                {member.memberships.status}
+                {member.memberships?.status || 'No membership'}
               </span>
-              {canEdit && (
-                <button className="flex items-center gap-2 px-3 py-2 bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors">
-                  <Send className="h-4 w-4" />
-                  Send Message
-                </button>
-              )}
             </div>
           </div>
 
@@ -112,7 +96,7 @@ export function MemberDetail() {
                 <Calendar className="h-5 w-5 text-gray-600" />
                 <div>
                   <p className="text-sm text-gray-600">Member Since</p>
-                  <p className="font-semibold text-gray-900">{formatDate(member.memberships.start_date)}</p>
+                  <p className="font-semibold text-gray-900">{member.memberships ? formatDate(member.memberships.start_date) : 'N/A'}</p>
                 </div>
               </div>
             </div>
@@ -226,14 +210,14 @@ export function MemberDetail() {
               <div className="space-y-3">
                 <div>
                   <p className="text-sm text-gray-600">Membership Type</p>
-                  <p className="font-medium capitalize">{member.memberships.membership_type}</p>
+                  <p className="font-medium capitalize">{member.memberships?.membership_type || 'No membership'}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <Calendar className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-600">Period</p>
                     <p className="font-medium">
-                      {formatDate(member.memberships.start_date)} - {formatDate(member.memberships.expiry_date)}
+                      {member.memberships ? `${formatDate(member.memberships.start_date)} - ${formatDate(member.memberships.expiry_date)}` : 'N/A'}
                     </p>
                   </div>
                 </div>

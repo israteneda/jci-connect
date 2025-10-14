@@ -58,7 +58,7 @@ Create `frontend/.env` file:
 ```env
 VITE_SUPABASE_URL=https://xxxxxxxxxxxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-VITE_N8N_WEBHOOK_URL=https://your-n8n.com/webhook/jci-connect
+VITE_BACKEND_URL=http://localhost:8001
 ```
 
 To get Supabase credentials:
@@ -119,25 +119,19 @@ The app will:
 - Create user in Supabase Auth
 - Create profile record
 - Create membership record
-- Trigger n8n webhook (if configured)
+- Send welcome email via backend API
 - Show success message
 
-### n8n Webhook Setup (Optional)
+### Backend Email Setup
 
-If you want to test webhooks:
+The system now uses the backend API for sending emails:
 
-1. Go to your n8n instance
-2. Create a new workflow
-3. Add a **Webhook** node
-4. Set method to **POST**
-5. Copy the webhook URL
-6. Add it to your `.env` file as `VITE_N8N_WEBHOOK_URL`
-7. Add nodes to process the data (email, WhatsApp, etc.)
-
-Example n8n workflow:
-```
-Webhook → Function → Send Email (Resend)
-```
+1. Configure your backend email service (SMTP, SendGrid, etc.)
+2. Set `VITE_BACKEND_URL` in your `.env` file
+3. The backend handles all email notifications:
+   - Welcome emails for new users
+   - Update notifications for profile changes
+   - Admin notifications for user deletions
 
 ### Troubleshooting
 
@@ -157,17 +151,17 @@ Webhook → Function → Send Email (Resend)
 - Check browser console for errors
 
 #### Webhook not triggering?
-- Verify `VITE_N8N_WEBHOOK_URL` is set
-- Check n8n webhook is active
-- Look at browser network tab for webhook requests
-- Webhook errors don't block member creation
+- Verify `VITE_BACKEND_URL` is set
+- Check backend email service is configured
+- Look at browser network tab for API requests
+- Email sending errors don't block member creation
 
 ### Next Steps
 
 1. ✅ Add more chapters
 2. ✅ Create test members
 3. ✅ Explore the dashboard
-4. ✅ Configure n8n workflows
+4. ✅ Configure backend email service
 5. ✅ Customize the UI colors/branding
 
 Need help? Check the main README.md or contact the team!

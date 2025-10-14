@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { triggerN8nWebhook } from '@/lib/webhooks'
-import { generateMemberNumber } from '@/lib/utils'
+import { sendWelcomeEmail } from '../lib/email'
 import type { Database } from '@/types/database.types'
 
 type Member = Database['public']['Tables']['profiles']['Row'] & {
@@ -11,8 +11,8 @@ type Member = Database['public']['Tables']['profiles']['Row'] & {
 
 interface CreateMemberData {
   email: string
-  password: string
-  role: 'guest' | 'prospective' | 'member' | 'admin'
+  password?: string
+  role: 'guest' | 'prospective' | 'member'
   first_name: string
   last_name: string
   phone?: string
@@ -30,44 +30,44 @@ export function useMembers() {
   const queryClient = useQueryClient()
 
   // Fetch all members using Supabase client
-  // Note: Fetches anyone with a membership record (includes admin-members)
+  // Note: Fetches all profiles (users with or without memberships)
   const { data: members, isLoading, error } = useQuery({
     queryKey: ['members'],
     queryFn: async () => {
-      // Fetch memberships
-      const { data: memberships, error: membershipsError } = await supabase
-        .from('memberships')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (membershipsError) throw membershipsError
-      if (!memberships) return []
-
-      const membershipsData = memberships as any[]
-
-      // Get user IDs from memberships
-      const userIds = membershipsData.map(m => m.user_id)
-
-      // Fetch profiles for those users
+      // Fetch all profiles first (excluding admin users)
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .in('id', userIds)
+        .neq('role', 'admin')
+        .order('created_at', { ascending: false })
 
       if (profilesError) throw profilesError
       if (!profiles) return []
 
       const profilesData = profiles as any[]
 
-      // Create a map of profiles by id for quick lookup
-      const profileMap = new Map(profilesData.map(p => [p.id, p]))
+      // Get user IDs from profiles
+      const userIds = profilesData.map(p => p.id)
+
+      // Fetch memberships for those users (if any exist)
+      const { data: memberships, error: membershipsError } = await supabase
+        .from('memberships')
+        .select('*')
+        .in('user_id', userIds)
+
+      if (membershipsError) throw membershipsError
+
+      // Create a map of memberships by user_id
+      const membershipsMap = new Map()
+      if (memberships) {
+        memberships.forEach(membership => {
+          membershipsMap.set(membership.user_id, membership)
+        })
+      }
 
       // Reshape data to match Member type and fetch emails
       const membersWithEmails = await Promise.all(
-        membershipsData.map(async (membership: any) => {
-          const profile = profileMap.get(membership.user_id)
-          if (!profile) return null
-
+        profilesData.map(async (profile: any) => {
           const { data: email } = await (supabase.rpc as any)('get_user_email', {
             user_id: profile.id
           })
@@ -75,18 +75,17 @@ export function useMembers() {
           return {
             ...profile,
             email: email || null,
-            memberships: membership
+            memberships: membershipsMap.get(profile.id) || null
           } as Member
         })
       )
 
-      // Filter out any null values
-      return membersWithEmails.filter(m => m !== null) as Member[]
+      return membersWithEmails
     },
   })
 
-  // Get single member
-  const getMember = async (userId: string): Promise<Member> => {
+  // Get single member - memoized to prevent infinite loops
+  const getMember = useCallback(async (userId: string): Promise<Member> => {
     // Fetch membership
     const membershipResult = await supabase
       .from('memberships')
@@ -121,7 +120,7 @@ export function useMembers() {
     }
 
     return member
-  }
+  }, [])
 
   // Create member using Supabase client
   const createMember = useMutation({
@@ -130,15 +129,20 @@ export function useMembers() {
       // Profile is auto-created by trigger: handle_new_user()
       // NOTE: Email confirmation must be disabled in Supabase project settings
       // Dashboard > Authentication > Email Auth > Enable email confirmations = OFF
+      // Use default password from environment if none provided
+      const password = memberData.password || import.meta.env.VITE_DEFAULT_USER_PASSWORD
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: memberData.email,
-        password: memberData.password,
+        password: password,
         options: {
           data: {
             first_name: memberData.first_name,
             last_name: memberData.last_name,
+            phone: memberData.phone || '+1000000000', // Ensure phone is not null (10 digits)
             role: memberData.role,
             status: memberData.role === 'prospective' ? 'pending' : 'active',
+            temp_password: !memberData.password, // Flag to indicate if using default password
           },
           emailRedirectTo: undefined, // Prevent confirmation email redirect
         },
@@ -199,47 +203,18 @@ export function useMembers() {
         throw new Error(`Failed to update profile: ${profileError.message}`)
       }
 
-      let memberNumber: string | undefined
-
-      // 4. Create membership (if membership data is provided)
-      if (memberData.membership_type && memberData.start_date && memberData.expiry_date) {
-        // Generate member number - use first 3 chars of address or fallback to JCI
-        const addressPrefix = memberData.address?.split(',')[0]?.trim().substring(0, 3).toUpperCase() || 'JCI'
-        memberNumber = generateMemberNumber(addressPrefix)
-
-        // Create membership
-        const { error: membershipError } = await supabase
-          .from('memberships')
-          .insert({
-            user_id: userId,
-            membership_type: memberData.membership_type,
-            payment_type: memberData.payment_type || 'annual',
-            start_date: memberData.start_date,
-            expiry_date: memberData.expiry_date,
-            member_number: memberNumber,
-            annual_fee: memberData.annual_fee,
-            status: 'active',
-            payment_status: 'pending',
-          } as any)
-
-        if (membershipError) {
-          throw new Error(`Failed to create membership: ${membershipError.message}. User was created but membership creation failed. User ID: ${userId}`)
-        }
-      }
-
-      // 5. Trigger n8n webhook
-      await triggerN8nWebhook('member.created', {
-        user_id: userId,
+      // 4. Send welcome email with user data
+      await sendWelcomeEmail({
         email: memberData.email,
-        role: memberData.role,
         first_name: memberData.first_name,
         last_name: memberData.last_name,
-        phone: memberData.phone,
-        member_number: memberNumber,
-        membership_type: memberData.membership_type,
+        role: memberData.role,
+        member_number: undefined, // No membership number since we're not creating membership
+        temp_password: !memberData.password, // Flag to indicate if using default password
+        password: password // Use the actual password that was set (either provided or default)
       })
 
-      return { userId, memberNumber }
+      return { userId }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] })
@@ -284,7 +259,7 @@ export function useMembers() {
         if (error) throw error
       }
 
-      // Trigger n8n webhook
+      // Send update notification email
       const { data: member } = await supabase
         .from('profiles')
         .select('*, memberships(*)')
@@ -292,9 +267,13 @@ export function useMembers() {
         .single() as any
 
       if (member) {
-        await triggerN8nWebhook('member.updated', {
-          user_id: userId,
-          ...member,
+        await sendWelcomeEmail({
+          email: member.email,
+          first_name: member.first_name,
+          last_name: member.last_name,
+          role: member.role,
+          member_number: member.memberships?.member_number,
+          is_update: true
         })
       }
     },
@@ -324,8 +303,15 @@ export function useMembers() {
         throw new Error(data.error || 'Failed to delete user')
       }
 
-      // Trigger n8n webhook
-      await triggerN8nWebhook('member.deleted', { user_id: userId })
+      // Send deletion notification email to admins
+      await sendWelcomeEmail({
+        email: 'admin@jci-connect.com', // Admin notification email
+        first_name: 'Admin',
+        last_name: 'User',
+        role: 'admin',
+        is_deletion: true,
+        deleted_user_id: userId
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] })

@@ -7,7 +7,7 @@ export function Dashboard() {
   const stats = {
     totalMembers: members?.length || 0,
     activeMembers: members?.filter(m => m.memberships?.status === 'active').length || 0,
-    senators: members?.filter(m => m.role === 'senator').length || 0,
+    prospectiveMembers: members?.filter(m => m.role === 'prospective').length || 0,
     expiredMembers: members?.filter(m => m.memberships?.status === 'expired').length || 0,
   }
 
@@ -40,8 +40,8 @@ export function Dashboard() {
           color="aqua"
         />
         <StatCard
-          title="Senators"
-          value={stats.senators}
+          title="Prospective"
+          value={stats.prospectiveMembers}
           icon={Award}
           color="amber"
         />
@@ -68,7 +68,7 @@ export function Dashboard() {
                     <p className="font-medium text-gray-900">
                       {member.first_name} {member.last_name}
                     </p>
-                    {member.role === 'senator' && (
+                    {member.role === 'prospective' && (
                       <Award className="h-4 w-4 text-amber-500" />
                     )}
                   </div>
@@ -76,10 +76,10 @@ export function Dashboard() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-medium text-navy">
-                    {member.memberships.member_number}
+                    {member.memberships?.member_number || 'No membership'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {member.memberships.membership_type}
+                    {member.memberships?.membership_type || 'Guest'}
                   </p>
                 </div>
               </div>

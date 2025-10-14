@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useMembers } from '@/hooks/useMembers'
 import { usePermissions } from '@/hooks/usePermissions'
 import { PermissionsLoader } from '@/components/common/PermissionsLoader'
-import { Plus, Search, Eye, Trash2, Filter } from 'lucide-react'
+import { Plus, Search, Trash2, Filter } from 'lucide-react'
 import { MemberFormDialog } from './MemberFormDialog'
 import { toast } from 'sonner'
 
@@ -19,7 +19,7 @@ export function Members() {
     const matchesSearch = 
       member.first_name.toLowerCase().includes(searchLower) ||
       member.last_name.toLowerCase().includes(searchLower) ||
-      member.memberships.member_number.toLowerCase().includes(searchLower) ||
+      (member.memberships?.member_number?.toLowerCase().includes(searchLower) || false) ||
       member.id.toLowerCase().includes(searchLower) ||
       (member.email && member.email.toLowerCase().includes(searchLower))
     
@@ -55,7 +55,7 @@ export function Members() {
         {can('members', 'create') && (
           <button
             onClick={() => setIsDialogOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors"
           >
             <Plus className="h-5 w-5" />
             Add Member
@@ -83,10 +83,10 @@ export function Members() {
             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent outline-none appearance-none bg-white"
           >
             <option value="all">All Roles</option>
-            <option value="admin">Admin</option>
-            <option value="senator">Senator</option>
+            {can('members', 'create') && <option value="admin">Admin</option>}
             <option value="member">Member</option>
-            <option value="candidate">Candidate</option>
+            <option value="prospective">Prospective</option>
+            <option value="guest">Guest</option>
           </select>
         </div>
       </div>
@@ -129,62 +129,84 @@ export function Members() {
               </tr>
             ) : (
               filteredMembers?.map((member) => (
-                <tr key={member.id} className="hover:bg-gray-50">
+                <tr 
+                  key={member.id} 
+                  className="hover:bg-gray-50 transition-colors"
+                >
                   <td className="px-4 md:px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {member.first_name} {member.last_name}
-                    </div>
-                    {/* Show email on mobile under name */}
-                    <div className="text-xs text-gray-500 sm:hidden mt-1">
-                      {member.email || 'N/A'}
-                    </div>
+                    <Link 
+                      to={`/dashboard/members/${member.id}`}
+                      className="block hover:text-navy transition-colors"
+                    >
+                      <div className="text-sm font-medium text-gray-900">
+                        {member.first_name} {member.last_name}
+                      </div>
+                      {/* Show email on mobile under name */}
+                      <div className="text-xs text-gray-500 sm:hidden mt-1">
+                        {member.email || 'N/A'}
+                      </div>
+                    </Link>
                   </td>
                   <td className="hidden sm:table-cell px-4 md:px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{member.email || 'N/A'}</div>
+                    <Link 
+                      to={`/dashboard/members/${member.id}`}
+                      className="block hover:text-navy transition-colors"
+                    >
+                      <div className="text-sm text-gray-500">{member.email || 'N/A'}</div>
+                    </Link>
                   </td>
                   <td className="px-4 md:px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      member.role === 'admin'
-                        ? 'bg-purple-100 text-purple-800'
-                        : member.role === 'senator'
-                        ? 'bg-amber-100 text-amber-800'
-                        : member.role === 'officer'
-                        ? 'bg-teal-100 text-teal-800'
-                        : member.role === 'member'
-                        ? 'bg-blue-100 text-blue-800'
-                        : member.role === 'past_member'
-                        ? 'bg-orange-100 text-orange-800'
-                        : member.role === 'guest'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {member.role === 'past_member' ? 'Past Member' : member.role.charAt(0).toUpperCase() + member.role.slice(1)}
-                    </span>
+                    <Link 
+                      to={`/dashboard/members/${member.id}`}
+                      className="block hover:text-navy transition-colors"
+                    >
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        member.role === 'admin'
+                          ? 'bg-purple-100 text-purple-800'
+                          : member.role === 'member'
+                          ? 'bg-blue-100 text-blue-800'
+                          : member.role === 'prospective'
+                          ? 'bg-amber-100 text-amber-800'
+                          : member.role === 'guest'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {member.role === 'prospective' ? 'Prospective' : member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                      </span>
+                    </Link>
                   </td>
                   <td className="hidden lg:table-cell px-4 md:px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{member.memberships?.member_number || 'N/A'}</div>
+                    <Link 
+                      to={`/dashboard/members/${member.id}`}
+                      className="block hover:text-navy transition-colors"
+                    >
+                      <div className="text-sm text-gray-900">{member.memberships?.member_number || 'N/A'}</div>
+                    </Link>
                   </td>
                   <td className="hidden xl:table-cell px-4 md:px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 capitalize">{member.memberships?.membership_type || 'N/A'}</div>
+                    <Link 
+                      to={`/dashboard/members/${member.id}`}
+                      className="block hover:text-navy transition-colors"
+                    >
+                      <div className="text-sm text-gray-900 capitalize">{member.memberships?.membership_type || 'N/A'}</div>
+                    </Link>
                   </td>
                   <td className="px-4 md:px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      member.memberships?.status === 'active'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {member.memberships?.status || 'N/A'}
-                    </span>
+                    <Link 
+                      to={`/dashboard/members/${member.id}`}
+                      className="block hover:text-navy transition-colors"
+                    >
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        member.memberships?.status === 'active'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {member.memberships?.status || 'N/A'}
+                      </span>
+                    </Link>
                   </td>
                   <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
-                      <Link
-                        to={`/dashboard/members/${member.id}`}
-                        className="text-aqua hover:text-aqua-600"
-                        title="View details"
-                      >
-                        <Eye className="h-5 w-5" />
-                      </Link>
                       {can('members', 'delete') && (
                         <button
                           onClick={() => handleDelete(member.id, `${member.first_name} ${member.last_name}`)}

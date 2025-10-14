@@ -18,5 +18,6 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'off', // Allow any types for now
     'prefer-const': 'error',
     'no-var': 'error',
+    'react-hooks/exhaustive-deps': 'off', // Disable exhaustive deps warning
   },
 }

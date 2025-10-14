@@ -32,7 +32,7 @@ import {
  */
 export function usePermissions() {
   const { user, loading } = useAuth();
-  const userRole = (user?.role || 'candidate') as Role;
+  const userRole = (user?.role || 'guest') as Role;
 
   /**
    * Check if current user can perform an action on a resource
@@ -131,19 +131,11 @@ export function usePermissions() {
   };
 
   /**
-   * Check if current user is a senator
-   * Convenience helper for common checks
-   */
-  const isSenator = (): boolean => {
-    return userRole === 'senator';
-  };
-
-  /**
-   * Check if current user is a member (including senators)
+   * Check if current user is a member
    * Convenience helper for common checks
    */
   const isMember = (): boolean => {
-    return userRole === 'member' || userRole === 'senator';
+    return userRole === 'member';
   };
 
   return {
@@ -152,7 +144,6 @@ export function usePermissions() {
     getActions,
     canManageUser,
     isAdmin,
-    isSenator,
     isMember,
     role: userRole,
     loading,

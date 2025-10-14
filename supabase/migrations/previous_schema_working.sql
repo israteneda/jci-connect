@@ -1,8 +1,8 @@
 -- =====================================================
--- JCI CONNECT - COMPLETE UNIFIED DATABASE SCHEMA
--- Migration: Complete unified schema with all features
--- Date: 2025-01-07
--- Purpose: Single comprehensive migration for all JCI Connect features
+-- JCI CONNECT - CONSOLIDATED DATABASE SCHEMA
+-- Migration: Consolidated schema with all features and latest fixes
+-- Date: 2025-01-09
+-- Purpose: Single comprehensive migration with role fixes and board position enhancements
 -- =====================================================
 
 -- =====================================================
@@ -19,7 +19,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- =====================================================
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'guest' CHECK (role IN ('admin', 'senator', 'officer', 'member', 'candidate', 'past_member', 'guest')),
+  role TEXT NOT NULL DEFAULT 'guest' CHECK (role IN ('admin', 'prospective', 'member', 'guest')),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended', 'pending')),
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 
 COMMENT ON TABLE public.profiles IS 'User profiles with personal information including dietary restrictions for event planning';
-COMMENT ON COLUMN public.profiles.role IS 'User role: admin (full access), senator (40+ approved member), officer (chapter board member), member (active), candidate (prospective), past_member (alumni/aged out), guest (browsing/interested)';
+COMMENT ON COLUMN public.profiles.role IS 'User role: admin (platform administrator - hidden), member (active member), prospective (potential member), guest (browsing/interested)';
 COMMENT ON COLUMN public.profiles.address IS 'Full address: street, city, country';
 COMMENT ON COLUMN public.profiles.diet_restrictions IS 'Dietary restrictions and allergies for event planning purposes';
 
@@ -47,7 +47,7 @@ COMMENT ON COLUMN public.profiles.diet_restrictions IS 'Dietary restrictions and
 CREATE TABLE IF NOT EXISTS public.memberships (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID UNIQUE NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  membership_type TEXT NOT NULL DEFAULT 'local' CHECK (membership_type IN ('local', 'senator', 'national', 'international')),
+  membership_type TEXT NOT NULL DEFAULT 'local' CHECK (membership_type IN ('local', 'national', 'international')),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'expired', 'suspended')),
   start_date DATE NOT NULL,
   expiry_date DATE NOT NULL,
@@ -70,6 +70,8 @@ CREATE TABLE IF NOT EXISTS public.board_positions (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   position_title TEXT NOT NULL,
   level TEXT NOT NULL CHECK (level IN ('local', 'national', 'international')),
+  description TEXT, -- Added for better documentation
+  priority INTEGER DEFAULT 0, -- Added for ordering positions
   start_date DATE,
   end_date DATE,
   is_active BOOLEAN NOT NULL DEFAULT true,
@@ -80,6 +82,8 @@ CREATE TABLE IF NOT EXISTS public.board_positions (
 COMMENT ON TABLE public.board_positions IS 'Board positions at local (chapter), national, and international levels';
 COMMENT ON COLUMN public.board_positions.level IS 'Position level: local (chapter), national, or international';
 COMMENT ON COLUMN public.board_positions.is_active IS 'Whether position is currently active (false = historical)';
+COMMENT ON COLUMN public.board_positions.description IS 'Optional description of the board position responsibilities';
+COMMENT ON COLUMN public.board_positions.priority IS 'Priority/order for displaying positions (lower number = higher priority)';
 
 -- =====================================================
 -- ORGANIZATION SETTINGS TABLE (renamed from chapter_settings)
@@ -281,6 +285,7 @@ CREATE INDEX IF NOT EXISTS idx_memberships_status ON public.memberships(status);
 CREATE INDEX IF NOT EXISTS idx_board_positions_user_id ON public.board_positions(user_id);
 CREATE INDEX IF NOT EXISTS idx_board_positions_is_active ON public.board_positions(is_active);
 CREATE INDEX IF NOT EXISTS idx_board_positions_level ON public.board_positions(level);
+CREATE INDEX IF NOT EXISTS idx_board_positions_priority ON public.board_positions(priority);
 
 CREATE INDEX IF NOT EXISTS idx_message_templates_type ON public.message_templates(type);
 CREATE INDEX IF NOT EXISTS idx_message_templates_is_active ON public.message_templates(is_active);
@@ -373,11 +378,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, first_name, last_name, role, status)
+  INSERT INTO public.profiles (id, first_name, last_name, phone, role, status)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'first_name', 'User'),
     COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
+    COALESCE(NEW.raw_user_meta_data->>'phone', '+1 0000000000'),
     COALESCE(NEW.raw_user_meta_data->>'role', 'guest'),
     COALESCE(NEW.raw_user_meta_data->>'status', 'pending')
   );
@@ -666,7 +672,7 @@ CREATE POLICY "profiles_select_policy"
     auth.uid() = id
     OR
     -- Second condition: only evaluated if first is FALSE
-    public.get_my_role() IN ('admin', 'senator', 'member')
+    public.get_my_role() IN ('admin', 'member')
   );
 
 -- Allow users to update their own profile
@@ -700,9 +706,9 @@ CREATE POLICY "Admins can manage memberships"
   USING (public.get_my_role() = 'admin')
   WITH CHECK (public.get_my_role() = 'admin');
 
-CREATE POLICY "Senators can view all memberships"
+CREATE POLICY "Members can view all memberships"
   ON public.memberships FOR SELECT
-  USING (public.get_my_role() = 'senator');
+  USING (public.get_my_role() IN ('member', 'admin'));
 
 CREATE POLICY "Users can view their own membership"
   ON public.memberships FOR SELECT
@@ -721,13 +727,9 @@ CREATE POLICY "Admins can manage board positions"
   USING (public.get_my_role() = 'admin')
   WITH CHECK (public.get_my_role() = 'admin');
 
-CREATE POLICY "Senators can view all board positions"
-  ON public.board_positions FOR SELECT
-  USING (public.get_my_role() = 'senator');
-
 CREATE POLICY "Members can view all board positions"
   ON public.board_positions FOR SELECT
-  USING (public.get_my_role() IN ('member', 'senator', 'admin'));
+  USING (public.get_my_role() IN ('member', 'admin'));
 
 CREATE POLICY "Users can view their own board positions"
   ON public.board_positions FOR SELECT
@@ -763,11 +765,6 @@ CREATE POLICY "Admins can manage all templates"
   ON public.message_templates FOR ALL
   USING (public.get_my_role() = 'admin')
   WITH CHECK (public.get_my_role() = 'admin');
-
--- Allow senators to view all templates
-CREATE POLICY "Senators can view all templates"
-  ON public.message_templates FOR SELECT
-  USING (public.get_my_role() = 'senator');
 
 -- =====================================================
 -- COMMUNICATION CONFIGURATIONS TABLE POLICIES
@@ -813,10 +810,10 @@ CREATE POLICY "Users can view their own activities"
   ON public.member_activities FOR SELECT
   USING (auth.uid() = user_id);
 
--- Admins and senators can view all activities
-CREATE POLICY "Admins and senators can view all activities"
+-- Admins can view all activities
+CREATE POLICY "Admins can view all activities"
   ON public.member_activities FOR SELECT
-  USING (public.get_my_role() IN ('admin', 'senator'));
+  USING (public.get_my_role() = 'admin');
 
 -- Admins can manage all activities
 CREATE POLICY "Admins can manage all activities"
@@ -833,10 +830,10 @@ CREATE POLICY "Users can view their own interactions"
   ON public.member_interactions FOR SELECT
   USING (auth.uid() = user_id);
 
--- Admins and senators can view all interactions
-CREATE POLICY "Admins and senators can view all interactions"
+-- Admins can view all interactions
+CREATE POLICY "Admins can view all interactions"
   ON public.member_interactions FOR SELECT
-  USING (public.get_my_role() IN ('admin', 'senator'));
+  USING (public.get_my_role() = 'admin');
 
 -- Admins can manage all interactions
 CREATE POLICY "Admins can manage all interactions"
@@ -858,10 +855,10 @@ CREATE POLICY "Users can view public notes about them"
   ON public.member_notes FOR SELECT
   USING (auth.uid() = user_id AND is_private = false);
 
--- Admins and senators can view all public notes
-CREATE POLICY "Admins and senators can view public notes"
+-- Admins can view all public notes
+CREATE POLICY "Admins can view public notes"
   ON public.member_notes FOR SELECT
-  USING (public.get_my_role() IN ('admin', 'senator') AND is_private = false);
+  USING (public.get_my_role() = 'admin' AND is_private = false);
 
 -- Users can view their own private notes
 CREATE POLICY "Users can view their own private notes"
@@ -883,10 +880,10 @@ CREATE POLICY "Users can view their own tags"
   ON public.member_tags FOR SELECT
   USING (auth.uid() = user_id);
 
--- Admins and senators can view all tags
-CREATE POLICY "Admins and senators can view all tags"
+-- Admins can view all tags
+CREATE POLICY "Admins can view all tags"
   ON public.member_tags FOR SELECT
-  USING (public.get_my_role() IN ('admin', 'senator'));
+  USING (public.get_my_role() = 'admin');
 
 -- Admins can manage all tags
 CREATE POLICY "Admins can manage all tags"
@@ -908,10 +905,10 @@ CREATE POLICY "Users can view assigned follow-ups"
   ON public.member_follow_ups FOR SELECT
   USING (auth.uid() = assigned_to);
 
--- Admins and senators can view all follow-ups
-CREATE POLICY "Admins and senators can view all follow-ups"
+-- Admins can view all follow-ups
+CREATE POLICY "Admins can view all follow-ups"
   ON public.member_follow_ups FOR SELECT
-  USING (public.get_my_role() IN ('admin', 'senator'));
+  USING (public.get_my_role() = 'admin');
 
 -- Admins can manage all follow-ups
 CREATE POLICY "Admins can manage all follow-ups"
@@ -919,134 +916,6 @@ CREATE POLICY "Admins can manage all follow-ups"
   USING (public.get_my_role() = 'admin')
   WITH CHECK (public.get_my_role() = 'admin');
 
--- =====================================================
--- SAMPLE DATA
--- =====================================================
-
--- Insert default organization settings
-INSERT INTO public.organization_settings (
-  id, 
-  organization_name, 
-  organization_city, 
-  organization_country, 
-  description, 
-  email, 
-  phone, 
-  website, 
-  logo_url, 
-  primary_color, 
-  secondary_color,
-  whatsapp_config,
-  email_config
-)
-VALUES (
-  '00000000-0000-0000-0000-000000000000',
-  'JCI Connect',
-  'Global',
-  'International',
-  'Default settings for JCI Connect platform.',
-  'info@jciconnect.org',
-  '+1234567890',
-  'https://www.jciconnect.org',
-  NULL,
-  '#3A67B1',
-  '#0097D7',
-  '{}',
-  '{}'
-)
-ON CONFLICT (id) DO NOTHING;
-
--- Insert sample email template
-INSERT INTO public.message_templates (name, type, subject, content, variables, is_active) VALUES
-(
-  'Prospective Member Email',
-  'email',
-  'Explore Growth, Leadership & Friendship with {{organization_name}}',
-  'Hi {{first_name}},
-
-Thank you for your interest in {{organization_name}}. We''re a community of young leaders and professionals who believe in developing skills, creating impact, and building lifelong friendships along the way.
-
-When you become part of JCI, you open the door to a wide range of opportunities for personal and professional growth:
-
-<strong>Training & Mentorship</strong> – Participate in workshops, develop public speaking and facilitation skills, and even progress toward becoming a certified JCI trainer.
-
-<strong>Leadership Development</strong> – Take up local, national, or international leadership roles that challenge and grow your abilities.
-
-<strong>Entrepreneurship & Innovation</strong> – Join projects that nurture entrepreneurial thinking and bring ideas to life.
-
-<strong>Community Impact</strong> – Lead or support initiatives that address real challenges and create meaningful change in Ottawa.
-
-<strong>Networking & Global Connections</strong> – Build strong relationships with professionals, entrepreneurs, and changemakers across Canada and over 100 countries worldwide.
-
-You can learn more about {{organization_name}} here: https://www.jciottawa.ca/index.php
-
-If you''d like to have a personal conversation about how JCI fits with your goals, you can schedule a short call with our Membership Director. [Insert Calendar Link]
-
-We''d love for you to experience what JCI truly offers — a place where learning leads to leadership, and friendships last far beyond meetings and events. Looking forward to see you as part of the community.
-
-Warm regards,
-Israel
-President, {{organization_name}}',
-  ARRAY['first_name', 'organization_name'],
-  true
-) ON CONFLICT DO NOTHING;
-
--- Insert sample WhatsApp template
-INSERT INTO public.message_templates (name, type, content, variables, is_active) VALUES
-(
-  'JCI Ottawa Welcome WhatsApp',
-  'whatsapp',
-  'Hi *{{first_name}} {{last_name}}*
-Welcome to *{{organization_name}}*. We''re excited to have you join our community of young leaders.
-
-Do you believe in _lifelong friendships_? At JCI, you''ll find opportunities to build genuine connections while growing your skills and making an impact.
-
-Here are a few links to help you get started:
-• WhatsApp Group (for updates and reminders): Join here
-• JVC Platform (workshops and leadership resources): https://jvc.jci.cc/
-• Website (events and projects): https://www.jciottawa.ca/index.php
-• Facebook: https://www.facebook.com/JCI.Ottawa
-• Instagram: https://www.instagram.com/jciottawa/
-
-You''ll also find a detailed welcome email in your inbox with more information about *{{organization_name}}* and how to get involved.
-
-If you''d like, you can schedule a short call with our Membership Director (Your new friend) for a personal orientation into the organization. (we will create a Calendly Link or alternate open source)
-
-Looking forward to meeting you soon — because beyond skills and projects, JCI is where _lifelong friendships_ are built.
-
-Best Regards,
-Israel
-President
-*{{organization_name}}*',
-  ARRAY['first_name', 'last_name', 'organization_name'],
-  true
-) ON CONFLICT DO NOTHING;
-
--- Insert default communication configurations
-INSERT INTO public.communication_configs (type, enabled, config_data) VALUES
-(
-  'whatsapp',
-  false,
-  '{
-    "api_url": "",
-    "api_key": "",
-    "instance_name": "",
-    "webhook_url": ""
-  }'
-),
-(
-  'email',
-  false,
-  '{
-    "smtp_host": "",
-    "smtp_port": 587,
-    "smtp_username": "",
-    "smtp_password": "",
-    "smtp_secure": false,
-    "from_email": "",
-    "from_name": ""
-  }'
-) ON CONFLICT (type) DO NOTHING;
 
 -- =====================================================
 -- SUCCESS MESSAGE
@@ -1055,7 +924,7 @@ INSERT INTO public.communication_configs (type, enabled, config_data) VALUES
 DO $$
 BEGIN
   RAISE NOTICE '========================================';
-  RAISE NOTICE '✅ JCI Connect Complete Unified Schema Created Successfully';
+  RAISE NOTICE '✅ JCI Connect Consolidated Schema Created Successfully';
   RAISE NOTICE '========================================';
   RAISE NOTICE '📋 Core Tables: profiles, memberships, board_positions, organization_settings';
   RAISE NOTICE '📧 Communication: message_templates, communication_configs, message_logs';
@@ -1063,9 +932,12 @@ BEGIN
   RAISE NOTICE '🔧 Functions: get_my_role, delete_user, extract_template_variables, validate_template_variables';
   RAISE NOTICE '🔒 RLS enabled on all tables with optimized policies';
   RAISE NOTICE '⚡ Indexes created for performance';
-  RAISE NOTICE '📝 Sample data and templates created';
+  RAISE NOTICE '🎯 Role system: admin, member, prospective, guest';
+  RAISE NOTICE '🏛️ Board positions with description and priority fields';
   RAISE NOTICE '========================================';
-  RAISE NOTICE 'Next Step: Create admin user via Supabase Auth UI';
-  RAISE NOTICE 'Then run: UPDATE profiles SET role = ''admin'' WHERE id = ''user-id'';';
+  RAISE NOTICE 'Next Steps:';
+  RAISE NOTICE '1. Run seed.sql to add sample data and templates';
+  RAISE NOTICE '2. Create admin user via Supabase Auth UI';
+  RAISE NOTICE '3. Run: UPDATE profiles SET role = ''admin'' WHERE id = ''user-id'';';
   RAISE NOTICE '========================================';
 END $$;

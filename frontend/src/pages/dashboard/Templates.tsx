@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useTemplates } from '@/hooks/useTemplates'
 import { PermissionsLoader } from '@/components/common/PermissionsLoader'
 import { 
   Plus, 
@@ -7,7 +9,7 @@ import {
   MessageSquare, 
   Edit, 
   Trash2, 
-  Eye, 
+  Eye,
   Send,
   Save,
   X,
@@ -37,134 +39,54 @@ const quillFormats = [
   'link', 'image'
 ]
 
-interface Template {
-  id: string
-  name: string
-  type: 'email' | 'whatsapp'
-  subject?: string
-  content: string
-  variables: string[]
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
+import type { Database } from '@/types/database.types'
+
+type Template = Database['public']['Tables']['message_templates']['Row']
 
 export function Templates() {
+  const navigate = useNavigate()
   const { can } = usePermissions()
+  const { templates, isLoading, deleteTemplate } = useTemplates()
   const [activeTab, setActiveTab] = useState<'email' | 'whatsapp'>('email')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
-  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-
-  // Mock data - will be replaced with actual API calls
-  const [templates, setTemplates] = useState<Template[]>([
-    {
-      id: '1',
-      name: 'Prospective Member Email',
-      type: 'email',
-      subject: 'Explore Growth, Leadership & Friendship with {{organization_name}}',
-      content: 'Hi {{first_name}},\n\nThank you for your interest in {{organization_name}}. We\'re a community of young leaders and professionals who believe in developing skills, creating impact, and building lifelong friendships along the way.\n\nWhen you become part of JCI, you open the door to a wide range of opportunities for personal and professional growth:\n\n<strong>Training & Mentorship</strong> – Participate in workshops, develop public speaking and facilitation skills, and even progress toward becoming a certified JCI trainer.\n\n<strong>Leadership Development</strong> – Take up local, national, or international leadership roles that challenge and grow your abilities.\n\n<strong>Entrepreneurship & Innovation</strong> – Join projects that nurture entrepreneurial thinking and bring ideas to life.\n\n<strong>Community Impact</strong> – Lead or support initiatives that address real challenges and create meaningful change in Ottawa.\n\n<strong>Networking & Global Connections</strong> – Build strong relationships with professionals, entrepreneurs, and changemakers across Canada and over 100 countries worldwide.\n\nYou can learn more about {{organization_name}} here: https://www.jciottawa.ca/index.php\n\nIf you\'d like to have a personal conversation about how JCI fits with your goals, you can schedule a short call with our Membership Director. [Insert Calendar Link]\n\nWe\'d love for you to experience what JCI truly offers — a place where learning leads to leadership, and friendships last far beyond meetings and events. Looking forward to see you as part of the community.\n\nWarm regards,\nIsrael\nPresident, {{organization_name}}',
-      variables: ['first_name', 'organization_name'],
-      is_active: true,
-      created_at: '2025-01-07T10:00:00Z',
-      updated_at: '2025-01-07T10:00:00Z'
-    },
-    {
-      id: '2',
-      name: 'JCI Ottawa Welcome WhatsApp',
-      type: 'whatsapp',
-      content: 'Hi *{{first_name}} {{last_name}}*\nWelcome to *{{organization_name}}*. We\'re excited to have you join our community of young leaders.\n\nDo you believe in _lifelong friendships_? At JCI, you\'ll find opportunities to build genuine connections while growing your skills and making an impact.\n\nHere are a few links to help you get started:\n• WhatsApp Group (for updates and reminders): Join here\n• JVC Platform (workshops and leadership resources): https://jvc.jci.cc/\n• Website (events and projects): https://www.jciottawa.ca/index.php\n• Facebook: https://www.facebook.com/JCI.Ottawa\n• Instagram: https://www.instagram.com/jciottawa/\n\nYou\'ll also find a detailed welcome email in your inbox with more information about *{{organization_name}}* and how to get involved.\n\nIf you\'d like, you can schedule a short call with our Membership Director (Your new friend) for a personal orientation into the organization. (we will create a Calendly Link or alternate open source)\n\nLooking forward to meeting you soon — because beyond skills and projects, JCI is where _lifelong friendships_ are built.\n\nBest Regards,\nIsrael\nPresident\n*{{organization_name}}*',
-      variables: ['first_name', 'last_name', 'organization_name'],
-      is_active: true,
-      created_at: '2025-01-07T10:00:00Z',
-      updated_at: '2025-01-07T10:00:00Z'
-    },
-    {
-      id: '3',
-      name: 'JCI Ottawa Welcome Email',
-      type: 'email',
-      subject: 'Welcome to {{organization_name}}, {{first_name}} {{last_name}}',
-      content: 'Hi {{first_name}},\n\nWelcome to {{organization_name}}. We\'re excited to have you join our community of young leaders who are building connections, developing skills, and creating impact in Ottawa and beyond.\n\nTo help you get started, here are a few important links:\n\nWhatsApp Group: This is where members share updates, event reminders, and stay in touch. Join here\nJVC Platform: Our global hub for workshops, trainings, and leadership resources. Visit JVC\nWebsite: Learn more about upcoming events and local projects. Visit Website\nFacebook and Instagram: Follow us to stay connected and actively participate in our online community.\nFacebook | Instagram\n\nWe\'d also like to make your introduction to {{organization_name}} more personal. You can schedule a short orientation call with our Membership Director at a time that works for you. [Insert Calendar Link]\n\nAs a fun way to introduce yourself to the group, we invite you to send a quick 30-second video sharing your name, what you do, and one fun fact about yourself. This is completely optional, but it\'s a great way for other members to get to know you.\n\nWe look forward to meeting you soon and seeing how you\'ll get involved in our community.\n\nWarm regards,\nIsrael\nPresident, {{organization_name}}',
-      variables: ['first_name', 'last_name', 'organization_name'],
-      is_active: true,
-      created_at: '2025-01-07T10:00:00Z',
-      updated_at: '2025-01-07T10:00:00Z'
-    }
-  ])
 
   const canManage = can('templates', 'update')
 
-  const handleCreateTemplate = async (templateData: Omit<Template, 'id' | 'created_at' | 'updated_at'>) => {
-    setIsLoading(true)
+  const handleCreateTemplate = async () => {
     try {
-      // TODO: Implement API call to create template
-      const newTemplate: Template = {
-        ...templateData,
-        id: Date.now().toString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-      setTemplates(prev => [...prev, newTemplate])
+      // This will be handled by the useTemplates hook
       setShowCreateModal(false)
       toast.success('Template created successfully!')
     } catch (error: any) {
       toast.error(error.message || 'Failed to create template')
-    } finally {
-      setIsLoading(false)
     }
   }
 
-  const handleUpdateTemplate = async (templateData: Omit<Template, 'id' | 'created_at' | 'updated_at'>) => {
-    if (!editingTemplate) return
-    
-    setIsLoading(true)
-    try {
-      // TODO: Implement API call to update template
-      setTemplates(prev => prev.map(t => 
-        t.id === editingTemplate.id 
-          ? { ...t, ...templateData, updated_at: new Date().toISOString() }
-          : t
-      ))
-      setEditingTemplate(null)
-      toast.success('Template updated successfully!')
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update template')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleDeleteTemplate = async (templateId: string) => {
     if (!confirm('Are you sure you want to delete this template?')) return
     
-    setIsLoading(true)
     try {
-      // TODO: Implement API call to delete template
-      setTemplates(prev => prev.filter(t => t.id !== templateId))
+      await deleteTemplate.mutateAsync(templateId)
       toast.success('Template deleted successfully!')
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete template')
-    } finally {
-      setIsLoading(false)
     }
   }
 
   const handleSendTest = async (template: Template) => {
-    setIsLoading(true)
     try {
       // TODO: Implement API call to send test message
       toast.success(`Test ${template.type} sent successfully!`)
     } catch (error: any) {
       toast.error(error.message || 'Failed to send test message')
-    } finally {
-      setIsLoading(false)
     }
   }
 
 
-  const filteredTemplates = templates.filter(t => t.type === activeTab)
+  const filteredTemplates = templates?.filter(t => t.type === activeTab) || []
 
   if (!canManage) {
     return (
@@ -221,7 +143,7 @@ export function Templates() {
             </h2>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors"
             >
               <Plus className="h-4 w-4" />
               Create Template
@@ -243,7 +165,7 @@ export function Templates() {
               </p>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors mx-auto"
+                className="flex items-center gap-2 px-3 py-2 text-sm bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors mx-auto"
               >
                 <Plus className="h-4 w-4" />
                 Create Template
@@ -252,9 +174,15 @@ export function Templates() {
           ) : (
             <div className="grid gap-4">
               {filteredTemplates.map((template) => (
-                <div key={template.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div 
+                  key={template.id} 
+                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                >
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                    <Link 
+                      to={`/dashboard/templates/${template.id}/edit`}
+                      className="flex-1 hover:text-navy transition-colors"
+                    >
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="font-medium text-gray-900">{template.name}</h3>
                         <span className={`px-2 py-1 text-xs rounded-full ${
@@ -276,9 +204,9 @@ export function Templates() {
                         {template.content}
                       </p>
                       
-                      {template.variables.length > 0 && (
+                      {(template.variables || []).length > 0 && (
                         <div className="flex flex-wrap gap-1 mb-2">
-                          {template.variables.map((variable) => (
+                          {(template.variables || []).map((variable) => (
                             <span
                               key={variable}
                               className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
@@ -292,7 +220,7 @@ export function Templates() {
                       <p className="text-xs text-gray-500">
                         Updated {new Date(template.updated_at).toLocaleDateString()}
                       </p>
-                    </div>
+                    </Link>
                     
                     <div className="flex items-center gap-2 ml-4">
                       <button
@@ -316,9 +244,9 @@ export function Templates() {
                       </button>
                       
                       <button
-                        onClick={() => setEditingTemplate(template)}
+                        onClick={() => navigate(`/dashboard/templates/${template.id}/edit`)}
                         className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-                        title="Edit"
+                        title="Edit Template"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
@@ -339,16 +267,13 @@ export function Templates() {
         </div>
       </div>
 
-      {/* Create/Edit Template Modal */}
-      {(showCreateModal || editingTemplate) && (
+      {/* Create Template Modal */}
+      {showCreateModal && (
         <TemplateModal
-          template={editingTemplate}
+          template={null}
           type={activeTab}
-          onClose={() => {
-            setShowCreateModal(false)
-            setEditingTemplate(null)
-          }}
-          onSave={editingTemplate ? handleUpdateTemplate : handleCreateTemplate}
+          onClose={() => setShowCreateModal(false)}
+          onSave={handleCreateTemplate}
           isLoading={isLoading}
         />
       )}
@@ -385,6 +310,7 @@ function TemplateModal({ template, type, onClose, onSave, isLoading }: TemplateM
     is_active: template?.is_active ?? true
   })
   const [showPreview, setShowPreview] = useState(false)
+  const previousContentRef = useRef<string>('')
 
   useEffect(() => {
     if (template) {
@@ -394,6 +320,8 @@ function TemplateModal({ template, type, onClose, onSave, isLoading }: TemplateM
         content: template.content,
         is_active: template.is_active
       })
+      // Update the ref to match the current content
+      previousContentRef.current = template.content
     } else {
       setFormData({
         name: '',
@@ -401,12 +329,20 @@ function TemplateModal({ template, type, onClose, onSave, isLoading }: TemplateM
         content: '',
         is_active: true
       })
+      // Reset the ref for new templates
+      previousContentRef.current = ''
     }
     // Reset preview state when template changes
     setShowPreview(false)
   }, [template])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const extractVariables = (text: string): string[] => {
+    const matches = text.match(/\{\{([^}]+)\}\}/g)
+    return matches ? matches.map(match => match.replace(/[{}]/g, '')) : []
+  }
+
+  // Handle form submission - empty dependency array to prevent infinite re-renders
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     
     const variables = extractVariables(formData.content + (formData.subject || ''))
@@ -414,18 +350,13 @@ function TemplateModal({ template, type, onClose, onSave, isLoading }: TemplateM
     await onSave({
       name: formData.name,
       type,
-      subject: type === 'email' ? formData.subject : undefined,
+      subject: type === 'email' ? formData.subject : null,
       content: formData.content,
       variables,
-      is_active: formData.is_active
+      is_active: formData.is_active,
+      created_by: null
     })
-  }
-
-
-  const extractVariables = (text: string): string[] => {
-    const matches = text.match(/\{\{([^}]+)\}\}/g)
-    return matches ? matches.map(match => match.replace(/[{}]/g, '')) : []
-  }
+  }, [])
 
 
   // Function to insert variables into Quill editor
@@ -446,11 +377,17 @@ function TemplateModal({ template, type, onClose, onSave, isLoading }: TemplateM
     }
   }
 
-  // Rich Text Editor Component for both Email and WhatsApp
-  const EmailRichTextEditor = () => {
-    const handleEditorChange = (content: string) => {
+  // Handle editor change - use ref to prevent infinite loops with large text
+  const handleEditorChange = useCallback((content: string) => {
+    // Only update if content actually changed to prevent infinite loops
+    if (previousContentRef.current !== content) {
+      previousContentRef.current = content
       setFormData(prev => ({ ...prev, content }))
     }
+  }, [])
+
+  // Rich Text Editor Component for both Email and WhatsApp
+  const EmailRichTextEditor = () => {
 
     return (
       <div className="space-y-4">
@@ -637,14 +574,14 @@ function TemplateModal({ template, type, onClose, onSave, isLoading }: TemplateM
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                className="px-3 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-3 py-2 text-sm bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
                 {isLoading ? 'Saving...' : 'Save Template'}
@@ -714,11 +651,11 @@ function PreviewModal({ template, onClose }: PreviewModalProps) {
               </div>
             </div>
 
-            {template.variables.length > 0 && (
+            {(template.variables || []).length > 0 && (
               <div>
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Variables:</h4>
                 <div className="flex flex-wrap gap-1">
-                  {template.variables.map((variable) => (
+                  {(template.variables || []).map((variable) => (
                     <span
                       key={variable}
                       className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
@@ -734,7 +671,7 @@ function PreviewModal({ template, onClose }: PreviewModalProps) {
           <div className="flex justify-end mt-6">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors"
+              className="px-3 py-2 text-sm bg-navy hover:bg-navy-600 text-white rounded-lg transition-colors"
             >
               Close
             </button>

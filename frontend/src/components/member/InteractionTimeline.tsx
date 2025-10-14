@@ -298,7 +298,7 @@ export function InteractionTimeline({ userId, canEdit = false }: InteractionTime
                 <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                 <p>No interactions recorded yet</p>
                 {canEdit && (
-                  <button className="mt-4 flex items-center gap-2 px-4 py-2 bg-navy text-white rounded-lg hover:bg-navy-600 transition-colors mx-auto">
+                  <button className="mt-4 flex items-center gap-2 px-3 py-2 text-sm bg-navy text-white rounded-lg hover:bg-navy-600 transition-colors mx-auto">
                     <Plus className="h-4 w-4" />
                     Add Interaction
                   </button>

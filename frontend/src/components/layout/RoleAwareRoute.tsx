@@ -2,7 +2,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 
 interface RoleAwareRouteProps {
   children: React.ReactNode
-  requiredRole?: 'admin' | 'member' | 'senator' | 'guest' | 'prospective'
+  requiredRole?: 'admin' | 'member' | 'guest' | 'prospective'
   fallback?: React.ReactNode
 }
 

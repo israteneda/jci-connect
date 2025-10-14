@@ -7,120 +7,52 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
       board_positions: {
         Row: {
           created_at: string
+          description: string | null
           end_date: string | null
           id: string
           is_active: boolean
           level: string
           position_title: string
+          priority: number | null
           start_date: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          description?: string | null
           end_date?: string | null
           id?: string
           is_active?: boolean
           level: string
           position_title: string
+          priority?: number | null
           start_date?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          description?: string | null
           end_date?: string | null
           id?: string
           is_active?: boolean
           level?: string
           position_title?: string
+          priority?: number | null
           start_date?: string | null
           updated_at?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      organization_settings: {
-        Row: {
-          organization_city: string | null
-          organization_country: string | null
-          organization_name: string
-          created_at: string
-          description: string | null
-          email: string | null
-          email_config: Json | null
-          id: string
-          logo_url: string | null
-          phone: string | null
-          primary_color: string
-          secondary_color: string
-          updated_at: string
-          website: string | null
-          whatsapp_config: Json | null
-        }
-        Insert: {
-          organization_city?: string | null
-          organization_country?: string | null
-          organization_name?: string
-          created_at?: string
-          description?: string | null
-          email?: string | null
-          email_config?: Json | null
-          id?: string
-          logo_url?: string | null
-          phone?: string | null
-          primary_color?: string
-          secondary_color?: string
-          updated_at?: string
-          website?: string | null
-          whatsapp_config?: Json | null
-        }
-        Update: {
-          organization_city?: string | null
-          organization_country?: string | null
-          organization_name?: string
-          created_at?: string
-          description?: string | null
-          email?: string | null
-          email_config?: Json | null
-          id?: string
-          logo_url?: string | null
-          phone?: string | null
-          primary_color?: string
-          secondary_color?: string
-          updated_at?: string
-          website?: string | null
-          whatsapp_config?: Json | null
         }
         Relationships: []
       }
@@ -483,6 +415,60 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          email: string | null
+          email_config: Json | null
+          id: string
+          logo_url: string | null
+          organization_city: string | null
+          organization_country: string | null
+          organization_name: string
+          phone: string | null
+          primary_color: string
+          secondary_color: string
+          updated_at: string
+          website: string | null
+          whatsapp_config: Json | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          email_config?: Json | null
+          id?: string
+          logo_url?: string | null
+          organization_city?: string | null
+          organization_country?: string | null
+          organization_name?: string
+          phone?: string | null
+          primary_color?: string
+          secondary_color?: string
+          updated_at?: string
+          website?: string | null
+          whatsapp_config?: Json | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          email_config?: Json | null
+          id?: string
+          logo_url?: string | null
+          organization_city?: string | null
+          organization_country?: string | null
+          organization_name?: string
+          phone?: string | null
+          primary_color?: string
+          secondary_color?: string
+          updated_at?: string
+          website?: string | null
+          whatsapp_config?: Json | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
@@ -497,7 +483,7 @@ export type Database = {
           last_login: string | null
           last_name: string
           linkedin_url: string | null
-          phone: string | null
+          phone: string
           role: string
           status: string
           updated_at: string
@@ -515,7 +501,7 @@ export type Database = {
           last_login?: string | null
           last_name: string
           linkedin_url?: string | null
-          phone?: string | null
+          phone: string
           role?: string
           status?: string
           updated_at?: string
@@ -533,7 +519,7 @@ export type Database = {
           last_login?: string | null
           last_name?: string
           linkedin_url?: string | null
-          phone?: string | null
+          phone?: string
           role?: string
           status?: string
           updated_at?: string
@@ -693,11 +679,7 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
 } as const
-

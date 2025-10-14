@@ -19,14 +19,17 @@ export const memberSchema = z.object({
     .email('Please enter a valid email address'),
   password: z
     .string()
-    .min(1, 'Password is required')
-    .min(6, 'Password must be at least 6 characters'),
+    .optional()
+    .refine(
+      (val) => !val || val.length >= 6,
+      'Password must be at least 6 characters'
+    ),
   phone_country_code: z.string().default('+1'),
   phone: z
     .string()
-    .optional()
+    .min(1, 'Phone number is required')
     .refine(
-      (val) => !val || /^\d{7,15}$/.test(val),
+      (val) => /^\d{7,15}$/.test(val),
       'Phone number must be between 7 and 15 digits'
     ),
   date_of_birth: z
@@ -43,33 +46,7 @@ export const memberSchema = z.object({
     ),
   address: z.string().optional(),
   diet_restrictions: z.string().optional(),
-
-  // User Role
-  role: z.enum(['guest', 'prospective', 'member', 'admin'], {
-    errorMap: () => ({ message: 'Please select a valid role' }),
-  }).default('guest'),
-
-  // Membership Information
-  has_membership: z.boolean().default(true),
-  payment_type: z.enum(['annual', 'monthly']).default('annual'),
-  annual_fee: z
-    .number()
-    .min(0, 'Fee must be a positive number')
-    .max(10000, 'Fee cannot exceed $10,000')
-    .default(100),
-  start_date: z.string().min(1, 'Start date is required'),
-  expiry_date: z.string().min(1, 'Expiry date is required'),
 })
-.refine(
-  (data) => {
-    if (!data.start_date || !data.expiry_date) return true
-    return new Date(data.expiry_date) > new Date(data.start_date)
-  },
-  {
-    message: 'Expiry date must be after start date',
-    path: ['expiry_date'],
-  }
-)
 
 export type MemberFormData = z.infer<typeof memberSchema>
 
