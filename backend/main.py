@@ -9,7 +9,7 @@ import logging
 import uvicorn
 
 from app.core.config import settings
-from app.api.communication import router as communication_router
+from app.interfaces.api.communication import router as communication_router
 
 # Configure logging
 logging.basicConfig(
